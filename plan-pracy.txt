@@ -1,0 +1,27 @@
+Apache Lucene jako przykład implementacji silnika wyszukiwania tekstowego
+
+1. Wstęp
+  - Problem wyszukiwania tekstowego
+  - Przykłady zastosowań silników wyszukiwania tekstowego
+  - Apache Lucene jako przykład implementacji silnika wyszukiwania tekstowego
+  - Powiązane projekty
+    * Solr
+    * Elastic Search
+  - Przykład wykorzystania Lucene: prosty program indeksujący dokumenty w zadanym katalogu i pozwalający na wyszukiwanie po pojedynczych wyrazach
+    
+2. Funkcjonalności Lucene Core
+  - Indeksowanie dokumentów
+  - Wyszukiwanie dokumentów
+    * Przebieg procesu wyszukiwania
+    * Rodzaje obsługiwanych zapytań 
+  (+ przykłady wykorzystania opisanych mechanizmów: snippety takie jak w patchach do https://issues.apache.org/jira/browse/LUCENE-3550)
+  - Inne funkcjonalności (fasetowanie, column stride fields)
+    
+3. Architektura
+  - Architektura oparta o kodeki
+  - Struktury wykorzystywane w procesie indeksowania
+    * Segmentowa struktura indeksu: indeksowanie dynamiczne
+    * Merge'owanie logarytmiczne (polityki merge'owania)
+    * Algorytmy kodowania list postingowych: VInt, Frame-of-Reference, Patched-Frame-of-Reference
+    
+4. Podsumowanie
