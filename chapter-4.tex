@@ -1,0 +1,24 @@
+\chapter{Operacje na indeksie}
+
+Podstawowym elementem, na którym operujemy podczas indeksowania jest dokument. Jak zostało to pokazane w pierwszym rozdziale, abstrakcją go opakowującą jest klasa \texttt{Document}. Dokumenty mogą być do indeksu dodawane, usuwane oraz odświeżane.
+
+\section{Dodawanie dokumentów}
+
+Przykład dodawania dokumentów został zaprezentowany w pierwszym rozdziale pracy. \texttt{Document}, tworzony na podstawie pól, jest zapisywany w indeksie za pośrednictwem klasy \texttt{IndexWriter}.
+
+\section{Usuwanie dokumentów}
+
+Usuwanie dokumentów może odbyć się na jeden z trzech sposobów: 
+\begin{enumerate}
+ \item usunięcie dokumentów zawierających określony term (lub zawierających jeden z podanego zbioru termów),
+ \item usunięcie dokumentów pasujących do danego zapytania (lub pasujących do jednego zapytania z podanego zbioru),
+ \item usunięcie wszystkich dokumentów z indeksu.
+\end{enumerate}
+
+Wszystkie wymienione wyżej sposoby są realizowane przez klasę \texttt{IndexWriter} -- tę samą, która służy do dodawania dokumentów. Proces usuwania odbywa się następująco: początkowo dany dokument zostaje jedynie \emph{zaznaczony} jako usunięty. Fizycznie cały czas jest obecny w indeksie odwróconym. Rozwiązanie to zastosowane jest ze względów optymalizacyjnych: wyszukanie wszystkich wystąpień danego dokumentu w indeksie wymagałoby przejrzenia całej struktury. Faktyczne usunięcie dokumentów odbywa się dopiero podczas łączenia segmentów, które samo w sobie wymaga przejrzenia wszystkich list postingowych indeksu. Istnieje możliwość fizycznego usunięcia dokumentów podczas otwierania indeksu (istnieje metoda \texttt{open()} klasy \texttt{DirectoryReader} przyjmująca jako drugi parametr flagę określającą, czy podczas otwierania zaznaczone dokumenty mają zostać faktycznie usunięte -- jednak stosowanie jej nie jest zalecane).
+
+\section{Odświeżanie dokumentów}
+
+Lucene nie pozwala na modyfikację zawartości raz zaindeksowanych dokumentów: jedyną możliwością jest podmiana dokumentu na nowy.
+
+Odświeżanie dokumentów odbywa się poprzez użycie metody \texttt{IndexWriter.updateDocuments()}. Posiada ona cztery przeciążenia, wszystkie działające na podobnej zasadzie: początkowego usunięcia dokumentów zawierających term wskazany jako parametr a następnie dodania dokumentu (bądź dokumentów) podanych jako kolejne argumenty. 

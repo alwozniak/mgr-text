@@ -1,0 +1,9 @@
+\chapter{Inne zagadnienia}
+
+\section{Podział indeksu}
+
+Jeśli mamy do czynienia z obszernym zbiorem dokumentów do zaindeksowania, dobrym rozwiązaniem może okazać się podział indeksu na kilka mniejszych, umieszczonych w różnych miejscach systemu plików bądź na różnych maszynach. Lucene dostarcza narzędzi do zrównoleglonego przeszukiwania zbioru indeksów i łączenia wyników. Podczas wyszukiwania należy skorzystać wtedy z klas \texttt{MultiSearcher} bądź \texttt{ParallelMultiSearcher} zamiast \texttt{IndexSearcher}.
+
+\section{Payloads}
+
+Podczas indeksowania, wraz z każdym wystąpieniem termu może zostać związana dodatkowa informacja (tzw. \emph{payload}). Zapisywana jest ona w indeksie jako tablica typu \texttt{byte[]}. Może być wykorzystana np. do oznaczenia, które wystąpienia termu są bardziej istotne lub powinny być specjalnie potraktowane, jeśli zostaną zwrócone użytkownikowi.

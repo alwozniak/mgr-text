@@ -1,0 +1,53 @@
+\chapter{Przygotowanie zapytania}
+
+Zapytanie reprezentowane jest przez obiekt typu \texttt{Query}. Może on być utworzony dwojako: bezpośrednio, za pomocą jawnego skonstruowania odpowiedniej podklasy \texttt{Query} bądź pośrednio -- przy pomocy \texttt{QueryParsera}.
+
+\section{Rodzaje zapytań}
+
+Lucene dostarcza wielu różnych implementacji zapytań. Oto ich krótkie opisy.
+
+\subsection{\texttt{TermQuery}}
+
+Jest to najprostszy i najpowszechniej używany typ zapytania, tworzony na podstawie pojedynczego termu. Dopasowuje się do wszystkich dokumentów zawierających wskazany term. Ma zastosowanie np. podczas wyszukiwania dokumentu po jego numerze identyfikacyjnym (o ile numer ten został zaindeksowany jako osobne pole). Przykład użycia tego typu zapytania wystąpił już w rozdziale pierwszym:
+
+\begin{lstlisting}
+ new TermQuery(new Term(CONTENT_FIELD, queryString));
+\end{lstlisting}
+
+Podczas używania \texttt{TermQuery} należy pamiętać o tym, że nie zawsze wyraz podany jako składnik termu będzie faktycznie tym samym wyrazem, jaki został umieszczony w indeksie -- \texttt{TermQuery} nie poddaje zadanego słowa analizie.
+
+\subsection{\texttt{BooleanQuery}}
+
+\texttt{BooleanQuery} służy do łączenia prostszych typów zapytań w jedno przy pomocy operatorów zaprzeczenia, logicznej różnicy i alternatywy. 
+
+\subsection{Zapytania o frazy: \texttt{PhraseQuery} i \texttt{MultiPhraseQuery}}
+
+Zapytania o frazę (grupę słów) można realizować przy pomocy jednej z dwóch implementacji:
+\begin{enumerate}
+ \item \texttt{PhraseQuery} -- dopasowuje się do dokumentów zawierających wskazaną sekwencję wyrazów. Istotnym parametrem jest tutaj tzw. \emph{slop factor}, wskazujący jakie maksymalnie mogą być odległości pomiędzy wyrazami frazy. \emph{Slop factor} równy 0 oznacza dopasowanie tylko do dokładnych wystąpień frazy. 
+ \item \texttt{MultiPhraseQuery} -- rozszerza funkcjonalności \texttt{PhraseQuery} o możliwość podania kilku alternatyw wyrazów występujących na wskazanym miejscu frazy. Pozwala np. na włączenie synonimów do zapytania. 
+\end{enumerate}
+
+\subsection{Zapytania o zakresy: \texttt{TermRangeQuery} i \texttt{NumericRangeQuery}}
+
+Zapytania te dopasowują się do wszystkich dokumentów zawierających termy bądź liczby mieszczące się w podanych zakresach. \texttt{TermRangeQuery} może być np. użyte do wyszukania wszystkich haseł w encyklopedii zaczynających się na litery a -- d. \texttt{NumericRangeQuery} może służyć np. do wyszukania wszystkich dokumentów opublikowanych w danym miesiącu (często stosowaną techniką jest indeksowanie dat jako liczb całkowitych).
+
+\subsection{Zapytania o niepełne termy: \texttt{PrefixQuery}, \texttt{WildcardQuery}, \texttt{RegexpQuery}}
+
+\texttt{PrefixQuery} dopasowuje się do dokumentów zawierających wyrazy zaczynające się określonym napisem. Podobnie, jak w przykładzie powyżej, może zostać użyte np. do wylistowania haseł słownika lub encyklopedii.
+
+\texttt{WildcardQuery} jest uogólnieniem poprzedniego przykładu -- dzięki użyciu dwóch znaków specjalnych: \emph{?}, oznaczającego dopasowanie do dokładnie jednego znaku oraz \emph{*}, oznaczającego dopasowanie do dowolnej liczby znaków. Wyszukiwanie przy pomocy \texttt{WildcardQuery} może być wolne, ponieważ w wielu wypadkach wymaga przejrzenia wszystkich zaindeksowanych termów. Dlatego odradza się np. konstruowania zapytań zaczynających się od znaków specjalnych.
+
+Najogólniejszą klasą zapytań o niepełne termy jest \texttt{RegexpQuery}, zwracające wszystkie dokumenty zawierające termy dopasowujące się do podanego wyrażenia regularnego.
+
+\subsection{\texttt{FuzzyQuery}}
+
+\texttt{FuzzyQuery} dopasowuje się do dokumentów zawierających wyrazy zbliżone do wskazanego. Miarą podobieństwa jest tutaj odległość edycyjna. Ten typ zapytania pozwala na poprawne wyszukanie dokumentów nawet w przypadku wprowadzenia zapytania z błędem pisowni.
+
+\subsection{\texttt{SpanQuery}}
+
+Implementacje \texttt{SpanQuery} pozwalają na wyszukanie wskazanych słów z zaznaczeniem, że powinny one występować w bliskiej odległości od siebie (tzw. ``proximity search''). Podstawowymi jednostkami budującymi \texttt{SpanQuery} są \texttt{SpanTermQuery} -- spełniający w tym kontekście te same funkcje co \texttt{TermQuery} oraz \texttt{SpanNearQuery}, pozwalające na określenie dozwolonej odległości pomiędzy słowami oraz czy pozwalamy na zamianę słów miejscami.
+
+\section{Przygotowanie zapytania przy pomocy klasy \texttt{QueryParser}}
+
+Poza ``ręcznym'' tworzeniem zapytań określonego typu, Lucene umożliwia dodanie automatyczne generowanie ich na podstawie napisu. Mechanizmem to umożliwiającym jest klasa \texttt{QueryParser}. W wielu wypadkach jej użycie jest to najwygodniejszym sposobem na uzyskanie obiektu \texttt{Query}: parsuje ona wyrażenia standardowo przyjętego języka zapytań i na podstawie wyniku tworzy najlepiej pasujący obiekt \texttt{Query}. Nie jest jednak w stanie utworzyć wszystkich typów zapytań wymienionych w poprzedniej sekcji (np. \texttt{SpanQueries}).

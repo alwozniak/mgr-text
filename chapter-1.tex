@@ -1,0 +1,195 @@
+\chapter{Wprowadzenie}
+
+W ciągu ostatnich kilkudziesięciu lat obserwujemy zjawisko zwane ``eksplozją danych'': ilość informacji zgromadzonych przez ludzkość rośnie eksponencjalnie. Dostępność informacji nie byłaby jednak do niczego przydatna -- bez możliwości efektywnego ich przeszukiwania. Dodatkowo, większość danych, które codziennie produkujemy nie posiada wyraźnej struktury.  Wyszukiwanie interesujących fragmentów w takich zbiorach nie jest więc problemem trywialnym. Dlategoteż tak ważne stało się tworzenie narzędzi to ułatwiających -- wyszukiwarek. 
+
+Celem niniejszej pracy jest przedstawienie biblioteki Apache Lucene pozwalającej tworzyć wyszukiwarki dokumentów tekstowych. W kolejnych rozdziałach opisane zostaną: funkcjonalności oferowane przez Lucene, jej architektura oraz przytoczone zostaną przykłady jej wykorzystania.
+
+\section{Apache Lucene}
+
+Lucene jest jedną z najpopularniejszych bibliotek wyszukiwania tekstowego. Jest napisana w całości w języku Java i udostępniona jest na licencji open source.
+
+Apache Lucene skupia w sobie cztery główne podprojekty: 
+\begin{itemize}
+ \item \emph{Lucene Core}, będący faktyczną implementacją silnika wyszukiwania. Na opisie tego właśnie podprojektu skupimy się w tej pracy. W dalszej części tekstu termin ``Lucene'' będzie odnosił się do Lucene Core.
+ \item \emph{Solr} jest implementacją serwera wyszukiwania, wykorzystującą Lucene Core jako silnik. Solr, poza wyszukiwaniem tekstowym, udostępnia takie funkcjonalności jak integracja z bazą danych, operowanie na popularnych formatach dokumentów (Word, PDF) czy wyszukiwanie po współrzędnych geograficznych.
+ \item \emph{Open Relevance Project} dostarcza narzędzi do testowania trafności wyników wyszukiwania.
+ \item \emph{PyLucene} jest rozszerzeniem Pythona pozwalającym na korzystanie z możliwości Lucene.
+\end{itemize}
+
+Dokumentacja Lucene Core wymienia m.in. następujące cechy charakterystyczne biblioteki:
+\begin{itemize}
+ \item szybkie, skalowalne indeksowanie dokumentów -- z możliwościami indeksowania inkrementalnego wykazującego się podobnymi właściwościami,
+ \item rozmiar indeksu nie przekraczający 20-30\% rozmiaru pierwotnych dokumentów,
+ \item wyszukiwanie połączone z sortowaniem wyników zgodnie z malejącą trafnością dopasowania do zapytania,
+ \item dostępność wielu rodzajów zapytań,
+ \item zdefiniowane przez użytkownika sortowanie wyników,
+ \item możliwość konfiguracji formatu plików indeksu (architektura oparta o kodeki).
+\end{itemize}
+
+Lucene Core, pomimo, że napisana w Javie, może być wykorzystana także w innych językach. Umożliwiają to liczne projekty towarzyszące, m.in. CLucene (implementacja w C++), Lucene.NET (portowanie biblioteki na platformę .NET) i LuceneKit (implementacja w języku Objective-C wraz ze wsparciem dla natywnej dla środowiska MacOS X biblioteki Cocoa i jej open source'owej implementacji GNUstep). Wszystkie implementacje Lucene gwarantują kompatybilność utworzonych przez nie indeksów.
+
+\section{Przykład wykorzystania Lucene}
+
+Poniżej zamieszczony jest prosty program wykorzystujący Lucene. Indeksuje on dokumenty z zadanego katalogu i pozwala na wyszukiwanie tych z nich, które zawierają podane przez użytkownika słowo kluczowe. Bazę dokumentów stanowi zbiór pięciu anglojęzycznych książek, pobranych ze strony Projektu Gutenberg \cite{gutenberg}.
+
+Oto przykładowy wynik uruchomienia programu:
+\begin{lstlisting}[escapeinside={@}{@}]
+@\label{result-1:enter}@Enter a single word query:
+thing
+@\label{result-1:query}@Documents matching the query: contents:thing
+@\label{result-1:begin}@Lewis Carroll - Alice's Adventures in Wonderland.txt
+James M. Barrie - Peter Pan.txt
+Emily Bronte - Wuthering Heights.txt
+Arthur Conan Doyle - The Adventures of Sherlock Holmes.txt
+@\label{result-1:end}@Jane Austen - Pride and Prejudice.txt
+\end{lstlisting}
+
+Po zaindeksowaniu dokumentów program pyta użytkownika o zapytanie, po którym ma odbywać się wyszukiwanie (linia \ref{result-1:enter}). Gdy użytkownik wprowadzi słowo kluczowe, następuje proces wyszukiwania. Program wypisuje zapytanie (linia \ref{result-1:query}) a następnie -- tytuły pasujących dokumentów (linie \ref{result-1:begin}-\ref{result-1:end}). Zauważmy, że zapytanie składa się z dwóch elementów: pola, po ktorym ma odbywać się wyszukiwanie oraz słowa kluczowego, oddzielonych dwukropkiem.
+
+Zapytanie użyte w powyższym przykładzie jest jednym z najpopularniejszych słów języka angielskiego -- nie dziwi więc fakt, że w wyniku otrzymaliśmy wszystkie dokumenty. Jeśli użyjemy mniej popularnego słowa, lista pasujących dokumentów będzie krótsza.
+
+\begin{lstlisting}[escapeinside={@}{@}]
+Enter a single word query:
+suspect
+Documents matching the query: contents:suspect
+Jane Austen - Pride and Prejudice.txt
+Emily Bronte - Wuthering Heights.txt
+Arthur Conan Doyle - The Adventures of Sherlock Holmes.txt
+\end{lstlisting}
+
+\subsection{Struktura programu}
+
+Zamieszczona poniżej metoda main ilustruje przebieg programu.
+
+\begin{lstlisting}[escapeinside={@}{@}]
+/**
+ * Maximum number of results returned by IndexSearcher instance.
+ */
+@\label{main:MAX_DOCS}@private static final int MAX_DOCS = 10;
+
+/**
+ * Relative path to a folder containing documents for indexing.
+ */
+private static final String CORPUS_FOLDER_PATH = "../books";
+
+/**
+ * An index directory.
+ */
+@\label{main:directory}@private static final Directory directory = new RAMDirectory();
+
+public static void main(String[] args) throws IOException {
+  @\label{main:createIndex}@createIndex(directory, CORPUS_FOLDER_PATH);
+  @\label{main:obtainQuery}@Query query = obtainQuery();
+  @\label{main:createIndexSearcher}@IndexSearcher searcher = createIndexSearcher(directory);
+  // Perform search.
+  @\label{main:search}@TopDocs topDocs = searcher.search(query, MAX_DOCS);
+  @\label{main:printResults}@printResults(query, searcher, topDocs);
+}
+\end{lstlisting}
+
+W linii \ref{main:createIndex} tworzony jest indeks. Metoda createIndex jako parametry przyjmuje obiekt typu Directory oraz ścieżkę do folderu zawierającego dokumenty do zaindeksowania. Directory jest interfejsem reprezentującym katalog zawierający pliki indeksu. W opisywanym przykładzie posługujemy się indeksem trzymanym w pamięci podręcznej, stąd korzystamy z implementacji RAMDirectory (linia \ref{main:directory}).
+
+Następnie, w linii \ref{main:obtainQuery} tworzymy obiekt typu Query, reprezentujący zapytanie. Klasą odpowiedzialną za przeszukiwanie indeksu jest IndexSearcher -- tworzony w linii \ref{main:createIndexSearcher}. Faktyczne wyszukiwanie odbywa się poprzez wykonanie polecenia searcher.search(query, MAX\_DOCS) w linii \ref{main:search} (MAX\_DOCS -- linia \ref{main:MAX_DOCS} -- jest maksymalną liczbą wyników, które może zwrócić proces wyszukiwania). Program kończy się wypisaniem wyników w linii \ref{main:printResults}.
+
+\subsection{Tworzenie indeksu}
+
+Metoda createIndex() ilustruje proces tworzenia indeksu: na początku tworzony jest obiekt typu IndexWriter (linia \ref{createIndex:indexWriter}) oraz lista dokumentów (linia \ref{createIndex:documents}). Po dodaniu dokumentów do zapisu (linia \ref{createIndex:add}) następuje commit (bez którego późniejsze wyszukiwanie nie byłoby możliwe) oraz zamknięcie obiektu indexWriter (linie \ref{createIndex:commit} -- \ref{createIndex:close}).
+
+\begin{lstlisting}[label=createIndex,escapeinside={@}{@}]
+private static void createIndex(Directory directory, String path) throws IOException {
+  @\label{createIndex:indexWriter}@IndexWriter indexWriter = createIndexWriter(directory);
+  @\label{createIndex:documents}@List<Document> documents = createDocuments(path);
+  @\label{createIndex:add}@indexWriter.addDocuments(documents);
+  @\label{createIndex:commit}@indexWriter.commit();
+  @\label{createIndex:close}@indexWriter.close();
+}
+
+private static IndexWriter createIndexWriter(Directory directory) throws IOException {
+  @\label{indexWriter:config}@IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_44, new StandardAnalyzer(Version.LUCENE_44));
+  return new IndexWriter(directory, config);
+}
+\end{lstlisting}
+
+IndexWriter jest klasą odpowiedzialną za zapis struktur indeksu do wskazanego katalogu. Poza obiektem typu Directory, IndexWriter przyjmuje w konstruktorze obiekt konfiguracji: IndexWriterConfig (linia \ref{indexWriter:config}), który z kolei potrzebuje instancji typu Analyzer (wykorzystaną tutaj implementacją jest StandardAnalyzer). Analyzer definiuje sposób ekstrakcji termów z dokumentu.
+
+Dokumenty tworzone są na podstawie plików zawartych we wskazanym folderze.
+
+\begin{lstlisting}
+private static List<Document> createDocuments(String path) throws IOException {
+  List<Document> documents = new ArrayList<>();
+  File documentsFolder = new File(path);
+  if (!documentsFolder.isDirectory()) {
+    throw new IOException("Specified path does not point to a directory.");
+  }
+  File[] files = documentsFolder.listFiles();
+  for (File file : files) {
+    if (!file.isDirectory() && !file.isHidden() && file.exists() && file.canRead()) {
+      Document document = createDocument(file);
+      documents.add(document);
+    }
+  }
+  return documents;
+}
+\end{lstlisting}
+
+Pojedynczy dokument (Document) jest zbiorem pól. Każde pole ma określony typ (wyspecyfikowany przez implementację abstrakcyjnej klasy Field), nazwę (podawaną jako pierwszy parametr konstruktora) oraz zawartość. Opcjonalnie zawartość ta może być zapisana w plikach indeksu -- aby można było później ją zwrócić w wyniku wyszukiwania. Przykład takiego pola znajduje się w linii \ref{createDocument:store} poniższego listingu: podczas tworzenia pola ``filename'' jako trzeci parametr konstruktora podane jest \texttt{Field.Store.YES} .
+
+\begin{lstlisting}[label=createDocument,escapeinside={@}{@}]
+/**
+ * Field names.
+ */
+public static final String CONTENT_FIELD = "contents";
+public static final String FILE_NAME_FIELD = "filename";
+
+private static Document createDocument(File file) throws FileNotFoundException {
+  Document document = new Document();
+  document.add(new TextField(CONTENT_FIELD, new FileReader(file)));
+  @\label{createDocument:store}@document.add(new StringField(FILE_NAME_FIELD, file.getName(), Field.Store.YES));
+  return document;
+}
+\end{lstlisting}
+
+\subsection{Tworzenie zapytania}
+
+Zapytanie jest tworzone na podstawie wczytanego z linii poleceń tekstu. Korzystamy z klasy TermQuery implementującej abstrakcyjne Query -- reprezentującej zapytanie składające się z pojedynczego termu. Ponieważ w Lucene termy identyfikowane są przez parę \emph{pole:term}, posługujemy się także nazwą pola, w którym odbywać się będzie wyszukiwanie (linia \ref{obtainQuery:termQuery}).
+
+\begin{lstlisting}[label=obtainQuery,escapeinside={@}{@}]
+private static Query obtainQuery() {
+  System.out.println("Enter a single word query:");
+  Scanner scanner = new Scanner(System.in);
+  String queryString = scanner.nextLine().trim();
+  scanner.close();
+  @\label{obtainQuery:termQuery}@return new TermQuery(new Term(CONTENT_FIELD, queryString));
+}
+\end{lstlisting}
+
+\subsection{Wyszukiwanie}
+
+Obiektem odpowiedzialnym za wykonywanie zapytań na indeksie jest IndexSearcher. Sposób tworzenia go ilustruje poniższy listing.
+
+\begin{lstlisting}
+private static IndexSearcher createIndexSearcher(Directory directory) {
+  IndexReader reader = null;
+  try {
+    reader = DirectoryReader.open(directory);
+  } catch (IOException e) {
+    e.printStackTrace();
+  }
+  return new IndexSearcher(reader);
+}
+\end{lstlisting}
+
+\subsection{Wypisywanie wyników}
+
+Metoda search() klasy IndexSearcher zwraca obiekt typu TopDocs, który m.in. zawiera listę najlepiej pasujących do zapytania dokumentów. Listing poniżej pokazuje sposób uzyskania i wykorzystania tej listy (dla każdego dokumentu obecnego w wyniku, program wypisuje na konsolę nazwę pliku odpowiadającemu temu dokumentowi).
+
+\begin{lstlisting}
+private static void printResults(Query query, IndexSearcher searcher, TopDocs topDocs) throws IOException {
+  System.out.println("Documents matching the query: " + query);
+  for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
+    Document document = searcher.doc(scoreDoc.doc);
+    String documentTitle = document.get(FILE_NAME_FIELD);
+    System.out.println(documentTitle);
+  }
+}
+\end{lstlisting}
