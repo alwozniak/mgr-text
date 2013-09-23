@@ -4,7 +4,7 @@ Istnieją sytuacje, w których samo uzyskanie dokumentów pasujących do zapytan
 
 \section{Pozyskiwanie informacji o wynikach, klasa \texttt{TopDocs}}
 
-Operacja \texttt{search()} wykonana na instancji klasy \texttt{IndexReader} zwraca obiekt \texttt{TopDocs}, zawierający odnośniki do dokumentów pasujących do zapytania. Możemy z niej pobrać numery oraz obliczone miary dopasowania (``score'') dla $n$ najlepiej ocenionych dokumentów (gdzie $n$ jest parametrem metody \texttt{search()}).
+Operacja \texttt{search()} wykonana na instancji klasy \texttt{IndexReader} zwraca obiekt \texttt{TopDocs}, zawierający odnośniki do dokumentów pasujących do zapytania. Możemy z niej pobrać numery oraz obliczone miary dopasowania (\emph{score}) dla $n$ najlepiej ocenionych dokumentów (gdzie $n$ jest parametrem metody \texttt{search()}).
 
 \section{Sortowanie wyników}
 
@@ -32,7 +32,7 @@ private TopDocs queryWithSort(IndexSearcher searcher, String sortFieldName, Sort
 }
 \end{lstlisting}
 
-Metoda \texttt{queryWithSort} obrazuje tworzenie obiektu \texttt{Sort} na podstawie pola, po wartościach którego zostaną posortowane wyniki. \texttt{SortField} potrzebuje wskazania nazwy oraz typu takiego pola. 
+Metoda \texttt{queryWithSort()} obrazuje tworzenie obiektu \texttt{Sort} na podstawie pola, po wartościach którego zostaną posortowane wyniki. \texttt{SortField} potrzebuje wskazania nazwy oraz typu takiego pola. 
 
 W przykładzie zostało użyte zapytanie typu \texttt{MatchAllDocsQuery} -- dopasowuje się ono do wszystkich dokumentów obecnych w indeksie. Stosowane jest głównie w testach.
 

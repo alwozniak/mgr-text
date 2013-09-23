@@ -59,7 +59,7 @@ Arthur Conan Doyle - The Adventures of Sherlock Holmes.txt
 
 \subsection{Struktura programu}
 
-Zamieszczona poniżej metoda main ilustruje przebieg programu.
+Zamieszczona poniżej metoda \texttt{main()} ilustruje przebieg programu.
 
 \begin{lstlisting}[escapeinside={@}{@}]
 /**
@@ -87,13 +87,13 @@ public static void main(String[] args) throws IOException {
 }
 \end{lstlisting}
 
-W linii \ref{main:createIndex} tworzony jest indeks. Metoda createIndex jako parametry przyjmuje obiekt typu Directory oraz ścieżkę do folderu zawierającego dokumenty do zaindeksowania. Directory jest interfejsem reprezentującym katalog zawierający pliki indeksu. W opisywanym przykładzie posługujemy się indeksem trzymanym w pamięci podręcznej, stąd korzystamy z implementacji RAMDirectory (linia \ref{main:directory}).
+W linii \ref{main:createIndex} tworzony jest indeks. Metoda \texttt{createIndex()} jako parametry przyjmuje obiekt typu \texttt{Directory} oraz ścieżkę do folderu zawierającego dokumenty do zaindeksowania. \texttt{Directory} jest interfejsem reprezentującym katalog zawierający pliki indeksu. W opisywanym przykładzie posługujemy się indeksem trzymanym w pamięci podręcznej, stąd korzystamy z implementacji \texttt{RAMDirectory} (linia \ref{main:directory}).
 
-Następnie, w linii \ref{main:obtainQuery} tworzymy obiekt typu Query, reprezentujący zapytanie. Klasą odpowiedzialną za przeszukiwanie indeksu jest IndexSearcher -- tworzony w linii \ref{main:createIndexSearcher}. Faktyczne wyszukiwanie odbywa się poprzez wykonanie polecenia searcher.search(query, MAX\_DOCS) w linii \ref{main:search} (MAX\_DOCS -- linia \ref{main:MAX_DOCS} -- jest maksymalną liczbą wyników, które może zwrócić proces wyszukiwania). Program kończy się wypisaniem wyników w linii \ref{main:printResults}.
+Następnie, w linii \ref{main:obtainQuery} tworzymy obiekt typu \texttt{Query}, reprezentujący zapytanie. Klasą odpowiedzialną za przeszukiwanie indeksu jest \texttt{IndexSearcher} -- tworzony w linii \ref{main:createIndexSearcher}. Faktyczne wyszukiwanie odbywa się poprzez wykonanie polecenia \texttt{searcher.search(query, MAX\_DOCS)} w linii \ref{main:search} (\texttt{MAX\_DOCS} -- linia \ref{main:MAX_DOCS} -- jest maksymalną liczbą wyników, które może zwrócić proces wyszukiwania). Program kończy się wypisaniem wyników w linii \ref{main:printResults}.
 
 \subsection{Tworzenie indeksu}
 
-Metoda createIndex() ilustruje proces tworzenia indeksu: na początku tworzony jest obiekt typu IndexWriter (linia \ref{createIndex:indexWriter}) oraz lista dokumentów (linia \ref{createIndex:documents}). Po dodaniu dokumentów do zapisu (linia \ref{createIndex:add}) następuje commit (bez którego późniejsze wyszukiwanie nie byłoby możliwe) oraz zamknięcie obiektu indexWriter (linie \ref{createIndex:commit} -- \ref{createIndex:close}).
+Metoda \texttt{createIndex()} ilustruje proces tworzenia indeksu: na początku tworzony jest obiekt typu \texttt{IndexWriter} (linia \ref{createIndex:indexWriter}) oraz lista dokumentów (linia \ref{createIndex:documents}). Po dodaniu dokumentów do zapisu (linia \ref{createIndex:add}) następuje commit oraz zamknięcie obiektu \texttt{indexWriter} (linie \ref{createIndex:commit} -- \ref{createIndex:close}).
 
 \begin{lstlisting}[label=createIndex,escapeinside={@}{@}]
 private static void createIndex(Directory directory, String path) throws IOException {
@@ -110,7 +110,7 @@ private static IndexWriter createIndexWriter(Directory directory) throws IOExcep
 }
 \end{lstlisting}
 
-IndexWriter jest klasą odpowiedzialną za zapis struktur indeksu do wskazanego katalogu. Poza obiektem typu Directory, IndexWriter przyjmuje w konstruktorze obiekt konfiguracji: IndexWriterConfig (linia \ref{indexWriter:config}), który z kolei potrzebuje instancji typu Analyzer (wykorzystaną tutaj implementacją jest StandardAnalyzer). Analyzer definiuje sposób ekstrakcji termów z dokumentu.
+\texttt{IndexWriter} jest klasą odpowiedzialną za zapis struktur indeksu do wskazanego katalogu. Poza obiektem typu \texttt{Directory}, \texttt{IndexWriter} przyjmuje w konstruktorze obiekt konfiguracji: \texttt{IndexWriterConfig} (linia \ref{indexWriter:config}), który z kolei potrzebuje instancji typu \texttt{Analyzer} (wykorzystaną tutaj implementacją jest \texttt{StandardAnalyzer}). \texttt{Analyzer} definiuje sposób ekstrakcji termów z dokumentu.
 
 Dokumenty tworzone są na podstawie plików zawartych we wskazanym folderze.
 
@@ -132,7 +132,7 @@ private static List<Document> createDocuments(String path) throws IOException {
 }
 \end{lstlisting}
 
-Pojedynczy dokument (Document) jest zbiorem pól. Każde pole ma określony typ (wyspecyfikowany przez implementację abstrakcyjnej klasy Field), nazwę (podawaną jako pierwszy parametr konstruktora) oraz zawartość. Opcjonalnie zawartość ta może być zapisana w plikach indeksu -- aby można było później ją zwrócić w wyniku wyszukiwania. Przykład takiego pola znajduje się w linii \ref{createDocument:store} poniższego listingu: podczas tworzenia pola ``filename'' jako trzeci parametr konstruktora podane jest \texttt{Field.Store.YES} .
+Pojedynczy dokument (\texttt{Document}) jest zbiorem pól. Każde pole ma określony typ (wyspecyfikowany przez implementację abstrakcyjnej klasy \texttt{Field}), nazwę (podawaną jako pierwszy parametr konstruktora) oraz zawartość. Opcjonalnie zawartość ta może być zapisana w plikach indeksu -- aby można było później ją zwrócić w wyniku wyszukiwania. Przykład takiego pola znajduje się w linii \ref{createDocument:store} poniższego listingu: podczas tworzenia pola \texttt{filename} jako trzeci parametr konstruktora podane jest \texttt{Field.Store.YES} .
 
 \begin{lstlisting}[label=createDocument,escapeinside={@}{@}]
 /**
@@ -151,7 +151,7 @@ private static Document createDocument(File file) throws FileNotFoundException {
 
 \subsection{Tworzenie zapytania}
 
-Zapytanie jest tworzone na podstawie wczytanego z linii poleceń tekstu. Korzystamy z klasy TermQuery implementującej abstrakcyjne Query -- reprezentującej zapytanie składające się z pojedynczego termu. Ponieważ w Lucene termy identyfikowane są przez parę \emph{pole:term}, posługujemy się także nazwą pola, w którym odbywać się będzie wyszukiwanie (linia \ref{obtainQuery:termQuery}).
+Zapytanie jest tworzone na podstawie wczytanego z linii poleceń tekstu. Korzystamy z klasy \texttt{TermQuery} implementującej abstrakcyjne \texttt{Query} -- reprezentującej zapytanie składające się z pojedynczego termu. Ponieważ w Lucene termy identyfikowane są przez parę \emph{pole:term}, posługujemy się także nazwą pola, w którym odbywać się będzie wyszukiwanie (linia \ref{obtainQuery:termQuery}).
 
 \begin{lstlisting}[label=obtainQuery,escapeinside={@}{@}]
 private static Query obtainQuery() {
@@ -165,7 +165,7 @@ private static Query obtainQuery() {
 
 \subsection{Wyszukiwanie}
 
-Obiektem odpowiedzialnym za wykonywanie zapytań na indeksie jest IndexSearcher. Sposób tworzenia go ilustruje poniższy listing.
+Obiektem odpowiedzialnym za wykonywanie zapytań na indeksie jest \texttt{IndexSearcher}. Sposób tworzenia go ilustruje poniższy listing.
 
 \begin{lstlisting}
 private static IndexSearcher createIndexSearcher(Directory directory) {
@@ -181,7 +181,7 @@ private static IndexSearcher createIndexSearcher(Directory directory) {
 
 \subsection{Wypisywanie wyników}
 
-Metoda search() klasy IndexSearcher zwraca obiekt typu TopDocs, który m.in. zawiera listę najlepiej pasujących do zapytania dokumentów. Listing poniżej pokazuje sposób uzyskania i wykorzystania tej listy (dla każdego dokumentu obecnego w wyniku, program wypisuje na konsolę nazwę pliku odpowiadającemu temu dokumentowi).
+Metoda \texttt{search()} klasy \texttt{IndexSearcher} zwraca obiekt typu \texttt{TopDocs}, który m.in. zawiera listę najlepiej pasujących do zapytania dokumentów. Listing poniżej pokazuje sposób uzyskania i wykorzystania tej listy (dla każdego dokumentu obecnego w wyniku, program wypisuje na konsolę nazwę pliku odpowiadającemu temu dokumentowi).
 
 \begin{lstlisting}
 private static void printResults(Query query, IndexSearcher searcher, TopDocs topDocs) throws IOException {

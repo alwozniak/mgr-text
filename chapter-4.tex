@@ -15,7 +15,9 @@ Usuwanie dokumentów może odbyć się na jeden z trzech sposobów:
  \item usunięcie wszystkich dokumentów z indeksu.
 \end{enumerate}
 
-Wszystkie wymienione wyżej sposoby są realizowane przez klasę \texttt{IndexWriter} -- tę samą, która służy do dodawania dokumentów. Proces usuwania odbywa się następująco: początkowo dany dokument zostaje jedynie \emph{zaznaczony} jako usunięty. Fizycznie cały czas jest obecny w indeksie odwróconym. Rozwiązanie to zastosowane jest ze względów optymalizacyjnych: wyszukanie wszystkich wystąpień danego dokumentu w indeksie wymagałoby przejrzenia całej struktury. Faktyczne usunięcie dokumentów odbywa się dopiero podczas łączenia segmentów, które samo w sobie wymaga przejrzenia wszystkich list postingowych indeksu. Istnieje możliwość fizycznego usunięcia dokumentów podczas otwierania indeksu (istnieje metoda \texttt{open()} klasy \texttt{DirectoryReader} przyjmująca jako drugi parametr flagę określającą, czy podczas otwierania zaznaczone dokumenty mają zostać faktycznie usunięte -- jednak stosowanie jej nie jest zalecane).
+Wszystkie wymienione wyżej sposoby są realizowane przez klasę \texttt{IndexWriter} -- tę samą, która służy do dodawania dokumentów. Proces usuwania odbywa się następująco: początkowo dany dokument zostaje jedynie \emph{zaznaczony} jako usunięty. Fizycznie cały czas jest obecny w indeksie odwróconym. Rozwiązanie to zastosowane jest ze względów optymalizacyjnych: wyszukanie wszystkich wystąpień danego dokumentu w indeksie wymagałoby przejrzenia całej struktury. 
+
+Faktyczne usunięcie dokumentów odbywa się dopiero podczas łączenia segmentów, które samo w sobie wymaga przejrzenia wszystkich list postingowych indeksu. Istnieje możliwość fizycznego usunięcia dokumentów podczas otwierania indeksu (istnieje metoda \texttt{open()} klasy \texttt{DirectoryReader} przyjmująca jako drugi parametr flagę określającą, czy podczas otwierania zaznaczone dokumenty mają zostać faktycznie usunięte -- jednak stosowanie jej nie jest zalecane).
 
 \section{Odświeżanie dokumentów}
 

@@ -1,4 +1,4 @@
-\chapter{Wyszukiwanie (prawie) natychmiast po indeksowaniu}
+\chapter{Near real-time search}
 
 \emph{Near real-time search} (czyli prawie natychmiastowe wyszukiwanie) jest funkcjonalnością dodaną w wersji 2.9 Lucene. Umożliwia ona przeszukiwanie najnowszych zmian wprowadzonych do indeksu, nawet jeśli nie zostały one jeszcze zacommitowane. 
 
@@ -25,7 +25,7 @@ Nowy segment jest tworzony i zapisywany na dysk w jednej z następujących sytua
  \item gdy liczba dokumentów dodanych w obecnie trwającym commicie przekroczy ustaloną wartość \emph{maxDocs},
  \item gdy łączna pamięć operacyjna zajęta przez dodane właśnie dokumenty przekroczy wartość współczynnika \emph{maxBufferSize}.
 \end{itemize}
-Świeżo utworzony segment należy do segmentów poziomu 0. Jeśli w indeksie znajduje się odpowiednia liczba segmentów tego samego poziomu $n$ (wartość ta jest ustalana przez współczynnik \emph{mergeFactor}), następuje połączenie (``merge'') tych segmentów w jeden większy -- segment poziomu $n+1$. Każdy tworzony segment (powstały jako zrzut nowododanych dokumentów na dysk lub jako połączenie mniejszych segmentów) dostaje swój unikalny numer. Numer najmłodszego segmentu jest przechowywany w pliku \texttt{segments\_N} i określany jest jako \emph{generacja} indeksu.
+Świeżo utworzony segment należy do segmentów poziomu 0. Jeśli w indeksie znajduje się odpowiednia liczba segmentów tego samego poziomu $n$ (wartość ta jest ustalana przez współczynnik \emph{mergeFactor}), następuje połączenie (\emph{merge}) tych segmentów w jeden większy -- segment poziomu $n+1$. Każdy tworzony segment (powstały jako zrzut nowododanych dokumentów na dysk lub jako połączenie mniejszych segmentów) dostaje swój unikalny numer. Numer najmłodszego segmentu jest przechowywany w pliku \texttt{segments\_N} i określany jest jako \emph{generacja} indeksu.
 
 W wyniku działania algorytmu, w idealnym przypadku, pomijając usuwanie dokumentów, powstaje indeks o strukturze schodkowej. Każdy poziom ma maksymalnie $\emph{mergeFactor} - 1$ segmentów. Segmenty każdego poziomu są o \emph{mergeFactor} większe od segmentów poziomu niższego (rozmiar najmłodszych segmentów jest regulowany parametrem \emph{maxBufferSize}).
 
