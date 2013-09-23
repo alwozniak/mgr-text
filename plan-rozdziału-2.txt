@@ -1,0 +1,58 @@
+Rozdział 2: funkcjonalności Lucene
+
+1. Przygotowanie do indeksowania: analiza danych
+  - abstrakcyjna klasa Analyzer oraz jej implementacje
+    * używanie standardowych analyzerów: na co one pozwalają? (tokenizacja, pozbycie się stop words, ekstrakcja termów)
+    * budowa własnego analyzera: napisać przykład (sensowny -- w "Lucene in Action" był to analyzer rozpoznający synonimy)
+  - ekstrakcja treści: musi być wykonana przy pomocy zewnętrznych narzędzi
+
+2. Indeksowanie danych
+  - indeksowanie wartości numerycznych (liczb, dat)
+  - różne typy pól
+  - parametry indeksowanych pól:
+    * INDEXED, NOT_INDEXED
+    * STORED
+    * STORE_TERM_VECTORS
+  - doc values
+  
+3. Operacje na indeksie
+  - dodawanie dokumentów
+  - odświeżanie / zmienianie dokumentów
+  - usuwanie dokumentów
+    * wspomnieć, że jest także możliwe przy pomocy IndexReadera (ale to dość zaawansowana funkcja)
+
+4. W jaki sposób Lucene ocenia dopasowanie dokumentów do zapytania?
+  - modyfikowanie obliczania relewantności dokumentów: boosting dodany do dokumentów, pól, podzapytań.
+
+5. Możliwość wyszukiwania natychmiast po dodaniu dokumentu (near real-time search)
+  - commit w Lucene
+  - algorytm budowania indeksu
+
+6. Wyszukiwanie: przygotowanie zapytania
+  - "ręcznie", przy pomocy Query API
+  - rodzaje zapytań
+    * najbardziej oczywiste, najpopularniejsze (TermQuery, PhraseQuery, PrefixQuery, WildcardQuery)
+    * SpanQueries
+    * MultiPhraseQuery
+    * range queries
+  - przygotowanie zapytania przy pomocy QueryParsera: parsowanie zapytań w standardowym języku wyszukiwarek
+    * ułatwienie - obsługuje większość popularnych typów zapytań
+    * istnieją zapytania, których QueryParser nie jest w stanie utworzyć
+    * jakie elementy języka skutkują utworzeniem jakiego zapytania?
+    
+7. Operacje na wynikach wyszukiwania
+  - pozyskiwanie danych o wynikach (przy pomocy TopDocs)
+  - Sortowanie wyników
+    * przy pomocy własnego FieldComparatorSource
+  - filtrowanie wyników
+    * korzyści i różnice w używaniu filtrów względem klauzul BooleanQuery
+    * tworzenie własnych filtrów
+    * filtrowanie przy pomocy filtrów dostarczonych przez Lucene
+  - używanie Collectora, konstrukcja własnego
+  - paginacja wyników
+
+8. Podział indeksu na kilka mniejszych. Równoległe wyszukiwanie we wszystkich przy pomocy MultiSearchera (ale to jest mało ciekawe).
+
+9. Payloads
+  - do czego mogą służyć?
+  - indeksowanie z dodaniem payloads oraz używanie ich podczas wyszukiwania
