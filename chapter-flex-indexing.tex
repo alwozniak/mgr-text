@@ -14,11 +14,11 @@ Lucene, pomimo, że była najpopularniejszym narzędziem do wyszukiwania tekstow
 
 \section{Architektura oparta o kodeki}
 
-Zmiany architektury polegały na wprowadzeniu dodatkowej warstwy pośredniczącej pomiędzy formatem dyskowym indeksu a biblioteką. Ilustruje to rysunek ~\ref{fig:newarchitecture} (źródło: \cite{flexindex}).
+Zmiany architektury polegały na wprowadzeniu dodatkowej warstwy pośredniczącej pomiędzy formatem dyskowym indeksu a biblioteką. Ilustruje to rysunek ~\ref{fig:newarchitecture}.
 
 \begin{figure}[here]
  \includegraphics[scale=0.5]{pictures/architecture.png}
- \caption{Schemat architektury opartej o kodeki.\label{fig:newarchitecture}}
+ \caption{Schemat architektury opartej o kodeki. Źródło: \cite{flexindex}.\label{fig:newarchitecture}}
 \end{figure}
 
 Operacje na indeksie (dodawanie, usuwanie lub modyfikowanie dokumentów, wyszukiwanie) są implementowane w wyższych warstwach biblioteki (moduły \emph{Indexing} i \emph{Searching} na rys. \ref{fig:newarchitecture}). Kodek dostarcza formatu narzędzi do zapisu i odczytu danych o zaindeksowanych dokumentach. Poprzez jego podmianę można zastosować np. niestandardowe algorytmy kompresji, struktury danych do przechowywania słowników termów itp.
@@ -46,11 +46,11 @@ Elementy, na które składa się kodek to:
 
 \section{Czterowymiarowa struktura indeksu}
 
-Zmiany, poza rozdzieleniem formatu zapisu indeksu do plików od architektury, dotyczyły także interfejsu programisty. Dostęp do poszczególnych elementów indeksu, czyli pól, termów, numerów dokumentów, pozycji wystąpień termu w dokumencie, itp. odbywa się przy pomocy tzw. \emph{czterowymiarowego API}, które obrazowo przedstawione jest na rys. \ref{fig:4dimAPI} (źródło: \cite{flexindex}).
+Zmiany, poza rozdzieleniem formatu zapisu indeksu do plików od architektury, dotyczyły także interfejsu programisty. Dostęp do poszczególnych elementów indeksu, czyli pól, termów, numerów dokumentów, pozycji wystąpień termu w dokumencie, itp. odbywa się przy pomocy tzw. \emph{czterowymiarowego API}, które obrazowo przedstawione jest na rys. \ref{fig:4dimAPI}.
 
 \begin{figure}[here]
  \includegraphics[scale=0.5]{pictures/api.png}
- \caption{Schemat interfejsu programisty pozwalającego na dostęp do poszczególnych elementów indeksu.\label{fig:4dimAPI}}
+ \caption{Schemat interfejsu programisty pozwalającego na dostęp do poszczególnych elementów indeksu. Źródło: \cite{flexindex}.\label{fig:4dimAPI}}
 \end{figure}
 
 Najbardziej nadrzędnym elementem dostępu do indeksu jest pole (\texttt{Field}). W uproszczeniu, dla każdego indeksu (bądź jego abstrakcji) możemy pobrać listę jego pól (przedstawione tutaj jako \texttt{FieldsEnum}, implementowane jako \texttt{Fields}). Pole, poza tytułem, posiada listę termów, do której mamy dostęp poprzez iterator \texttt{TermsEnum}. Dla każdego termu możemy pobrać listę dokumentów, w których on wystąpił (\texttt{DocsEnum}), a dla każego z dokumentów -- listę pozycji wystąpień (\texttt{PositionsEnum} -- jak zostanie to omówione później, w faktycznej implementacji iteratory \texttt{DocsEnum} i \texttt{PositionsEnum} są zaimplementowane jako jedna klasa).
@@ -58,7 +58,7 @@ Najbardziej nadrzędnym elementem dostępu do indeksu jest pole (\texttt{Field})
 Powyższy schemat nie oddaje faktycznej architektury dostępu do elementów indeksu -- jest jedynie jej nakreśleniem. Rysunek poniżej (\ref{fig:indexApi}) ilustruje, w jaki sposób koncepcja czterowymiarowego API została przełożona na abstrakcyjne klasy Lucene Core. [Do uzupełnienia: to jest właśnie definicja serwisu, który ma być dostarczony przez SPI] Programista chcący zaimplementować własny kodek musi stworzyć swoją hierarchię klas zgodnie z tą strukturą.
 
 \begin{figure}[here]
- \includegraphics[scale=0.6]{pictures/LuceneAccessAPI.jpg}
+ \includegraphics[scale=0.64]{pictures/LuceneAccessAPI_1.jpg}
  \caption{Struktura klas służących do pobierania poszczególnych elementów indeksu. Źródło: opracowanie własne.\label{fig:indexApi}}
 \end{figure}
 
@@ -85,7 +85,7 @@ W przykładzie z pierwszego rozdziału przedstawiono prosty odczyt indeksu przy 
 
 \begin{figure}[here]
  \centering
- \includegraphics[scale=0.5]{pictures/Readers.jpg}
+ \includegraphics[scale=0.54]{pictures/Readers_1.jpg}
  \caption{Struktura klas dostępu do indeksu: \texttt{IndexReader} oraz klasy potomne. Źródło: opracowanie własne. \label{fig:indexReader}}
 \end{figure}
 
@@ -122,8 +122,8 @@ Format list postingowych jest miejscem, które najprawdopodobniej zmieniłby pro
 Jak zostało wspomniane w sekcji \ref{sec:codecStructure}, za format list postingowych odpowiada klasa \texttt{PostingsFormat}. Jej głównym zadaniem jest dostarczenie i zarządzanie cyklem życia dwóch obiektów: \texttt{FieldsProducer} i \texttt{FieldsConsumer}, które są odpowiedzialne za, odpowiednio, odczyt i zapis danych z plików indeksu. Architekturę formatu list postingowych przedstawia rys. \ref{fig:postingFormat}.
 
 \begin{figure}[here]
- \includegraphics[scale=0.6]{pictures/PostingsFormat.jpg}
- \caption{Schemat klas służących do zapisu formatu list postingowych.\label{fig:postingFormat}}
+ \includegraphics[scale=0.65]{pictures/PostingsFormat_1.jpg}
+ \caption{Schemat klas służących do zapisu formatu list postingowych. Źródło: opracowanie własne.\label{fig:postingFormat}}
 \end{figure}
 
 Klasa \texttt{FieldsProducer} jest odpowiedzialna za odczyt danych z segmentu -- stąd powiązanie z przedstawioną już wcześniej klasą \texttt{Fields}. \texttt{FieldsConsumer} jest z kolei odpowiedzialny za zapis nowego segmentu (powstałego w wyniku zrzutu danych na dysk lub w wyniku łączenia segmentów). Określenia \emph{producer} i \emph{consumer} mogą wydawać się tutaj mało intuicyjne. Zrozumienie ich ról może ułatwić następujące zdanie: ,,\texttt{FieldsConsumer} \emph{pobiera} (konsumuje) właśnie definiowane pole i zapisuje je w indeksie, podczas gdy \texttt{FieldsProducer} odczytuje pole z indeksu (\emph{produkuje} je z plików indeksu)''.
@@ -137,12 +137,12 @@ Oczywiście, wszystkie klasy diagramu \ref{fig:postingFormat} są abstrakcyjne -
 [Tutaj: klasy w obecnym kodeku implementujące te wszystkie funkcjonalności -- opis. Opowiedzenie o tym, że skomplikowanie architektury z rys. \ref{fig:postingFormatRead} i \ref{fig:postingFormatWrite} służy temu, aby można było podmieniać także format słowników termów.]
 
 \begin{figure}[here]
- \includegraphics[scale=0.6]{pictures/Lucene41PostingsFormatRead.jpg}
+ \includegraphics[scale=0.62]{pictures/Lucene41PostingsFormatRead_1.jpg}
  \caption{Odczyt list postingowych i innych informacji z indeksu odwróconego: schemat klas wykorzystywanych przez domyślny kodek. Źródło: opracowanie własne. \label{fig:postingFormatRead}}
 \end{figure}
 
 \begin{figure}[here]
- \includegraphics[scale=0.6]{pictures/Lucene41PostingsFormatWrite.jpg}
+ \includegraphics[scale=0.64]{pictures/Lucene41PostingsFormatWrite.jpg}
  \caption{Zapis list postingowych i innych informacji do indeksu odwróconego: schemat klas wykorzystywanych przez domyślny kodek. Źródło: opracowanie własne. \label{fig:postingFormatWrite}}
 \end{figure}
 
