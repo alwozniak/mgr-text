@@ -37,7 +37,7 @@ Z każdego \texttt{AtomicReadera} pobrana jest także instancja \texttt{Fields}.
 \texttt{MultiFields} jest rozszerzeniem klasy \texttt{Fields}. Grupuje w sobie reprezentacje pól pochodzących z różnych segmentów i pozwala na operowanie ich zawartością tak, jakby były to pola pobrane z jednego segmentu. Jego schemat (oraz schematy klas powiązanych) przedstawia rys. \ref{multiFields}.
 
 \begin{figure}[here]
- \includegraphics[scale=0.65]{pictures/MultiFields_1.jpg}
+ \includegraphics[scale=0.65]{pictures/MultiFields_2.jpg}
  \caption{\texttt{MultiFields} oraz klasy powiązane. Źródło: opracowanie własne.\label{multiFields}}
 \end{figure}
 
@@ -127,4 +127,115 @@ W przypadku innych opcji indeksowania do powyższego algorytmu wprowadza się ki
 
 \texttt{DocsEnum} jest abstrakcją pozwalającą pobierać kolejne elementy list postingowych. Jej interfejs zawiera jedynie metody zwracające numer dokumentu obecnie wskazywanego przez iterator, jego częstość oraz pozwalające na przejście do kolejnych dokumentu. Dodatkowe funkcjonalności są implementowane przez jej liczne rozszerzenia (np. wspomniany już \texttt{DocsAndPostitionsEnum}). W algorytmie łączenia list postingowych wykorzystywane są cztery z nich: \texttt{MultiDocsEnum}, \texttt{MappingMultiDocsEnum} oraz odpowiadające im \texttt{MultiDocsAndPositionsEnum} i \texttt{MappingMultiDocsAndPositionsEnum}. Przyjrzymy się im dokładniej.
 
-Podczas łączenia termów (w metodzie \texttt{TermsConsumer.merge()}) z iteratora termów (konkretniej: z instancji \texttt{MultiTermsEnum}) pobierany jest obiekt \texttt{MultiDocsEnum}. Zawiera on informacje o listach postingowych dla danego termu pochodzących z łączonych segmentów oraz odpowiadające im wskaźniki na dany segment (w postaci obiektów \textt{ReaderSlice}). 
+Podczas łączenia termów (w metodzie \texttt{TermsConsumer.merge()}) z iteratora termów (konkretniej: z instancji \texttt{MultiTermsEnum}) pobierany jest obiekt \texttt{MultiDocsEnum}. Zawiera on informacje o listach postingowych dla danego termu pochodzących z łączonych segmentów oraz odpowiadające im wskaźniki na dany segment (w postaci obiektów \texttt{ReaderSlice}). Schemat klasy \texttt{MultiDocsEnum} przedstawia rys. \ref{fig:multiDocsEnum}.
+
+\begin{figure}[here]
+ \includegraphics[scale=0.4]{pictures/MultiDocsEnum.png}
+ \caption{\texttt{MultiDocsEnum} i jej zawartość. Źródło: opracowanie własne. \label{fig:multiDocsEnum}}
+\end{figure}
+
+Poza innymi wskaźnikami i zmiennymi, \texttt{MultiDocsEnum} posługuje się zmienną \texttt{current} wskazującą na obecnie odczytywany iterator dokumentów -- \texttt{current} odwiedza wszystkie zgromadzone obiekty \texttt{DocsEnum} i iteruje po ich zawartości. Przeskakuje na następny w momencie wyczerpania postingów w obecnie odwiedzanej instancji \texttt{DocsEnum}. Dzięki temu z punktu widzenia klasy \texttt{PostingsConsumer} \texttt{MultiDocsEnum} zachowuje się dokładnie tak samo, jak każdy \texttt{DocsEnum}. 
+
+Obiekty \texttt{ReaderSlice} służą z kolei do odczytywania podstawy przenumerowania dokumentów pochodzących z danego segmentu.
+
+\texttt{MappingMultiDocsEnum}, poza wymienionymi wyżej strukturami, zawiera także infomację o tym, które dokumenty powinny zostać usunięte podczas łączenia segmentów. Jest ona przechowywana w strukturze \texttt{DocMap} i pobierana jest z instancji \texttt{MergeState} (rys. \ref{fig:mappingMultiDocsEnum}). Instancja \texttt{MappingMultiDocsEnum} jest tworzona podczas łączenia termów w metodzie \texttt{TermsConsumer.merge()} -- listy postingowe z pobranego wcześniej obiektu \texttt{MultiDocsEnum} są do niej kopiowane i w dalszej części algorytmu wszystkie operacje na tych listach wykonywane są właśnie na kopiach znajdujących się w \texttt{MappingMultiDocsEnum}. 
+
+Celem tego zabiegu jest zachowanie podzielonej odpowiedzialności: zadaniem \texttt{MultiDocsEnum} jest gromadzenie kilku \texttt{DocsEnum} i przedstawianie ich w postaci jednego iteratora. \texttt{MappingMultiDocsEnum} natomiast do tych funkcjonalności dodaje jeszcze możliwość pomijania dokumentów gotowych do usunięcia z indeksu. 
+
+\begin{figure}[here]
+ \includegraphics[scale=0.4]{pictures/MappingMultiDocsEnum.png}
+ \caption{\texttt{MappingMultiDocsEnum}. Źródło: opracowanie własne. \label{fig:mappingMultiDocsEnum}}
+\end{figure}
+
+Gdy \texttt{MappingMultiDocsEnum} pytany jest o kolejny dokument z właśnie rozpatrywanej listy postingowej, sprawdza najpierw w odpowiedniej instancji \texttt{DocMap}, czy kolejny wskazywany dokument na liście jest ,,żywy''. Podaje jego numer tylko wtedy, jeśli faktycznie tak jest. W ten sposób dokumenty zaznaczone do usunięcia są pomijane w procesie łączenia list. 
+
+Przepisywanie zawartości jednej klasy do drugiej nie jest najelegantszym rozwiązaniem -- z punktu widzenia czystości kodu lepsze byłoby tutaj zastosowanie wzorca projektowego \emph{dekorator}: \texttt{MappingMultiDocsEnum} mógłby opakowywać instancję \texttt{MultiDocsEnum} i jednocześnie rozszerzać funkcjonalność \texttt{DocsEnum} o pomijanie dokumentów gotowych do usunięcia.
+
+\section{Propozycja optymalizacji algorytmu łączenia list postingowych}
+
+\subsection{Opis problemu}
+
+Zauważmy, że w procesie łączenia list postingowych numery dokumentów przepisywane są pojedynczo: dowolne rozszerzenie \texttt{DocsEnum} potrafi podawać kolejne postingi, jeden za drugim, bez możliwości ich grupowania. Listy postingowe w plikach indeksu trzymane są w formie zakodowanej (por. \ref{sec:packedBlockEncoding} i \ref{sec:vIntEncoding}), natomiast numery dokumentów gotowych do usunięcia są (w uproszczeniu) dostępne jako liczby całkowite. W związku z tym, podczas łączenia list postingowych każdy posting musi być odkodowany w celu sprawdzenia, czy ma on być zapisany do listy wynikowej, czy nie. Jeśli dany dokument jest ,,żywy'' (nie znajduje się na liście dokumentów do usunięcia), jego numer musi zostać ponownie zakodowany przed zapisaniem. Zatem dla list postingowych długości $l_1$ i $l_2$ wykonujemy $O(l_1 + l_2)$ operacji odkodowania i zakodowania liczby całkowitej.
+
+W większości systemów wyszukiwania dokumenty usuwane są dość rzadko -- co oznacza, że w ogólnym przypadku liczba ,,martwych'' postingów w łączonych listach jest stosunkowo mała. W związku z tym często możnaby unikać niepotrzebnych operacji kodowania i odkodowania. Wymaga to jednak modyfikacji algorytmu łączenia list: chcielibyśmy móc niekiedy kopiować całe zakodowane bloki zamiast pojedynyczych postingów. Pomysł taki został zgłoszony w systemie zarządzania zadaniami związanym z Lucene (Lucene Jira, \cite{jira}). Jego skrótowy opis znajduje się w \cite{idea}.
+
+Blok postingów mógłby zostać przekopiowany bez dekodowania, o ile liczba dokumentów usuniętych znajdujących się w nim byłaby stosunkowo mała (implementacja rozwiązania zawierałaby modyfikowalną maksymalną dopuszczalną liczbę ,,martwych'' dokumentów w bloku). Jeśli w danym bloku byłoby więcej dokumentów do usunięcia, byłby on przepisywany tak, jak dotychczas -- po jednym elemencie.
+
+\subsection{Proponowane rozwiązanie}
+\label{sec:solution}
+
+W tej sekcji omówione zostanie proponowane rozwiązanie dla najprostszego przypadku indeksowania (\texttt{IndexOptions.DOCS\_ONLY}). Wprowadzenie opisanej wyżej modyfikacji wymaga rozwiązania dwóch problemów:
+\begin{enumerate}
+ \item w jaki sposób zmienić architekturę części odpowiadającej za łączenie list postingowych tak, aby istniała możliwość kopiowania zarówno bloków (bez dekodowania) oraz pojedynczych postingów?
+ \item jak wyznaczyć bloki gotowe do przekopiowania?
+\end{enumerate}
+
+Zmiany w architekturze rozpoczynają się od wprowadzenia klasy reprezentującej element listy postingowej, \texttt{PostingElement}. Jej schemat specyfikuje rys. \ref{fig:postingElement}. W zależności od tego, jaki fragment listy postingowej jest zwracany (\texttt{type} przyjmujące wartość \texttt{PostingElementType.BLOCK} lub \texttt{PostingElementType.INT}), inicjalizowane jest pole \texttt{postingBlocks} lub \texttt{posting}.
+
+\begin{figure}[here]
+ \includegraphics[scale=0.7]{pictures/PostingElement.jpg}
+ \caption{Klasa \texttt{PostingElement}. Źródło: opracowanie własne. \label{fig:postingElement}}
+\end{figure}
+
+Dodatkowo, potrzebne są też odpowiedniki klas \texttt{DocsEnum} oraz \texttt{MultiDocsEnum} potrafiące się nią posługiwać. Wprowadzamy więc \texttt{PostingElementEnum} oraz \texttt{MultiPostingElementEnum} (rys. \ref{fig:postingEnums}).
+
+\begin{figure}[here]
+ \includegraphics[scale=0.6]{pictures/PostingEnums.jpg}
+ \caption{\texttt{PostingElementEnum} oraz \texttt{MultiPostingElementEnum} -- rozszerzenia \texttt{DocsEnum} wykorzystywane w zmodyfikowanym algorytmie łączenia list postingowych. Źródło: opracowanie własne. \label{fig:postingEnums}}
+\end{figure}
+
+Taka zmiana wymaga uzasadnienia kilku kwestii.
+\begin{enumerate}
+ \item \label{item:inheritance} Jak można odczytać z diagramu \ref{fig:postingEnums}, zarówno \texttt{PostingElementEnum} oraz \texttt{MultiDocsAndPositionsEnum} rozszerzają klasę \texttt{DocsEnum} i w związku z tym dziedziczą jej interfejs, posługujący się jedynie liczbami całkowitymi. Na pierwszy rzut oka może to wydawać się niezgodne z ideą zmiany -- chcemy wszak wprowadzić abstrakcję opakowującą elementy list postingowych (do tego służy nam właśnie \texttt{PostingElement}) i nowe klasy powinny się tylko nią posługiwać. Dziedziczenie po \texttt{DocsEnum} służy tutaj zachowaniu zgodności z resztą systemu -- chcemy, aby wprowadzone zmiany jak najmniej modyfikowały istniejący interfejs programisty biblioteki i jak najmniej ingerowały w strukturę klas. Dodatkowo, dziedziczenie po \texttt{DocsEnum} pozwoli nam wykorzystać to, że lista postingowa jest skip listą (co okaże się przydatne podczas wyznaczania fragmentu listy do późniejszego przekopiowania).
+ \item Wszystkie metody klasy \texttt{DocsEnum} są abstrakcyjne. W związku dużo bardziej elegancko byłoby posłużyć się w tym wypadku interfejsem (najlepiej parametryzowanym), a nie klasą abstrakcyjną. Możnaby wtedy uprościć hierarchię iteratorów postingów dzięki wykorzystaniu wielodziedziczenia (w Javie klasy mogą dziedziczyć tylko po jednej klasie bazowej -- mogą natomiast implementować wiele interfejsów): funkcjonalność iterowania po postingach można byłoby wtedy oddzielić od funkcjonalności grupowania innych iteratorów. Taka zmiana wymagałaby jednak przebudowania znacznej części Lucene -- i prawdopodobnie nie poprawiłaby niczego poza czytelnością kodu. Praktycznie rzecz biorąc nie warto więc jej wprowadzać.
+ \item W punkcie \ref{item:inheritance} jako jeden z argumentów za dziedziczeniem \texttt{PostingElementEnum} z \texttt{DocsEnum} wspomniane zostało współdzielenie operowania na liście postingowej jak na skip liście. Możnaby tutaj pokusić się o oddzielenie tego zadania od reszty funkcjonalności \texttt{DocsEnum} poprzez wyekstrahowanie interfejsu \texttt{Skippable}, gromadzącego metody \texttt{advance(int target)} i \texttt{slowAdvance(int target)}. Poprzez wprowadzenie relacji implementowania interfejsu pomiędzy \texttt{DocsEnum} i \texttt{Skippable} oraz \texttt{PostingElementEnum} i \texttt{Skippable}, zależność między \texttt{DocsEnum} i \texttt{PostingElementEnum} byłaby rozluźniona -- potencjalnie możnaby nawet zrezygnować z relacji dziedziczenia pomiędzy tymi klasami. Wadą takiego rozwiązania byłby brak możliwości dziedziczenia implementacji metody \texttt{slowAdvance()}, która w obecnym kształcie systemu jest taka sama dla wszystkich iteratorów elementów list postingowych.
+\end{enumerate}
+
+Wprowadzenie \texttt{PostingElement} oraz nowych iteratorów postingów wymagałoby też zmian w metodach \texttt{merge()} klas \texttt{TermsConsumer} oraz \texttt{PostingsConsumer}. Iterowanie po postingach i ich odczyt jest wykonywany przez \texttt{PostingElementEnum}, samo łączenie odbywa się w metodzie wspomnianej powyżej. Dodatkowo, \texttt{PostingsConsumer} (a dokładniej: jego rozszerzenie przypisane do danego kodeka) jest odpowiedzialny za zapis list postingowych. Należy zatem dodać mu funkcjonalność zapisu zakodowanych bloków postingów. 
+
+Od strony implementacyjnej, najprostszym sposobem dodania wspomnianych funkcjonalności jest zastosowanie wzorca projektowego \emph{dekorator}: opakowanie klasy \texttt{PostingsConsumer} w klasę, która jednocześnie dziedziczyć będzie po niej zachowanie. Klasę opakowującą nazwijmy \texttt{BlockPostingsConsumer}. Jej nowe funkcjonalności są zaimplementowane bezpośrednio, natomiast fukcjonalności dziedziczone z \texttt{PostingsConsumer} są delegowane do wewnętrznej instancji tego typu. Metoda \texttt{merge()}, pochodząca z \texttt{PostingsConsumer} jest nadpisana w \texttt{BlockPostingsConsumer}.
+
+\begin{figure}[here]
+ \centering
+ \includegraphics[scale=0.7]{pictures/PostingsConsumerWrapper.jpg}
+ \caption{\texttt{BlockPostingsConsumer} -- dekorator dla \texttt{PostingsConsumera}. Źródło: opracowanie własne. \label{fig:postingsConsumerWrapper}}
+\end{figure}
+
+Samo utworzenie instancji \texttt{BlockPostingsConsumer} mogłoby się odbywać w \texttt{TermsConsumer.merge()}. Instancja odpowiedniego dla kodeka \texttt{PostingsConsumera} zaraz po pobraniu byłaby opakowywana w nowe funkcjonalności poprzez wstrzyknięcie jej do konstruktora klasy \texttt{BlockPostingsConsumer}.
+
+Ponadto, w klasie \texttt{TermsConsumer} pole \texttt{docsEnum} powinno zmienić typ z \texttt{MappingMultiDocsEnum} na \texttt{MultiPostingElementEnum}.
+
+Nowy algorytm łączenia termów (\texttt{TermsConsumer.merge()}), wykorzystujący wyżej opisane zmiany, wyglądałby więc następująco:
+\begin{enumerate}
+ \item Zainicjalizuj pole \texttt{docsEnum} typu \texttt{MultiPostingElementEnum}, o ile nie zostało to jeszcze zrobione.
+ \item Dla każdego termu \texttt{t} dostępnego z \texttt{MultiTermsEnum} pobierz iterator \texttt{docsEnumIn} typu \texttt{MultiPostingElementEnum} (ponieważ podczas łączenia termów mamy listy postingowe pochodzące z różnych segmentów, wiemy, że pobrany iterator jest agregatorem innych iteratorów).
+ \item Rozpocznij zapis listy postingowej dla \texttt{t} (przy pomocy wywołania \texttt{startTerm(t)}). Pobierz instancję \texttt{PostingsConsumera}, i podaj ją jako parametr konstruktora klasy \texttt{BlockPostingsConsumer}.
+ \item Wywołaj \texttt{BlockPostingsConsumer.merge()} z odpowiednimi parametrami (instancją \texttt{MergeState}, flagą opcji indeksowania oraz zmienną \texttt{docsEnumIn}).
+ \item Zakończ zapis termu (\texttt{BlockPostingsConsumer.finishTerm()}).
+\end{enumerate}
+
+Jak widać, za łączenie postingów jest teraz odpowiedzialna klasa \texttt{BlockPostingsConsumer}. Oto szkic algorytmu łączenia list, do zaimplementowania w \texttt{BlockPostingsConsumer.merge()}. Metoda ta powinna przyjmować następujące parametry: \texttt{MergeState mergeState}, \texttt{IndexOptions indexOptions} i \texttt{PostingElementEnum postingsElementEnum}.
+\begin{enumerate}
+ \item Tak długo jak \texttt{postingsElementEnum} jest niepusty, wykonuj kroki \ref{newMergeBegin} -- \ref{newMergeEnd}.
+ \item \label{newMergeBegin} Do zmiennej \texttt{posting} pobierz kolejny \texttt{PostingElement} z \texttt{postingsElementEnum}.
+ \item \label{newMergeEnd} Jeśli \texttt{posting} jest typu \texttt{PostingElementType.BLOCK}, zapisz cały blok (lub bloki) przy pomocy \texttt{BlockPostingsConsumer.writeBlocks(posting.getBlocks())}. Jeśli \texttt{posting} jest typu \texttt{PostingElementType.INT}, skorzystaj ze ,,starego'' sposobu zapisu (\texttt{PostingsConsumer.startTerm()}, \texttt{PostingsConsumer.finishTerm()}) pojedynczego postingu.
+ \item Zakończ algorytm.
+\end{enumerate}
+
+Do rozwiązania pozostaje jeszcze następująca kwestia: jak ustalić, który fragment listy postingowej (pojedyncza wartość, pojedynczy blok, wiele bloków) powinien zostać przekopiowany? Klasą, która powinna o tym decydować będzie \texttt{PostingElementEnum} lub klasa z niej wywiedziona. 
+
+Pomimo, że wszystkie bloki list postignowych są zakodowane i nie możemy pobrać z nich wartości bezpośrednio, możemy wykorzystać tzw. \texttt{skipData}. Pamiętamy, że lista postingowa jest skip listą. Przed każdym blokiem postingów zapisywana jest informacja o wskaźnikach do tego bloku oraz (odkodowana) wartość pierwszego elementu bloku. Mając dany \texttt{mergeState}, potrafimy wylistować numery wszystkich dokumentów usuniętych. Możemy więc ustalić (posługując się skip listą), jak o wiele bloków odległy jest kolejny element usunięty i bloki bez usunięć przekopiować bez dekodowania.
+
+Jeśli okazałoby się, że w obecnym bloku występują dokumenty usunięte, możemy ustalić ich liczbę -- i na tej podstawie zdecydować, czy blok powinien być przekopiowany w całości, czy po jednym elemencie. 
+
+Te obliczenia wykonywać powinna metoda \texttt{PostingElementEnum.nextPostingElement()}. Jak widać na diagramie \ref{fig:postingEnums}, przyjmuje ona jako parametr obiekt typu \texttt{MergeState} -- ponieważ to właśnie ten obiekt stanu umożliwia odczytanie listy dokumentów usuniętych.
+
+\subsection{Potencjalne problemy i uwagi dotyczące zaproponowanego rozwiązania}
+
+Sekcja \ref{sec:solution} opisuje wysokopoziomową koncepcję rozwiązania -- jedyne, co pozostaje do zrobienia to przekucie jej na kod. Należy jednak pamiętać o tym, że wiele drobnych problemów może się ujawnić także na etapie implementacji. Poniżej naszkicowanych zostanie kilka kwestii tego typu. To, czy faktycznie okażą się one trudnością, pozostaje do zweryfikowania podczas pracy nad kodem, na etapie testowania lub nawet w trakcie działania systemu. 
+\begin{enumerate}
+ \item Jak zostało to niejednokrotnie wspomniane, dokumenty numerowane są od zera w obrębie każdego segmentu. Podczas łączenia list postingowych owe numery porządkowe są zmieniane poprzez dodanie do nich tzw. bazy, która obliczana jest jako łączna liczba dokumentów w listach już połączonych. Zatem, aby poprawnie zapisywać numery dokumentów w sytuacji, w której pierwszy blok listy będzie przekopiowany bez dekodowania, tak czy inaczej należy odkodować pierwszy posting tego bloku, dodać do niego bazę oraz obliczyć różnicę pomiędzy wartością tak otrzymaną a ostatnim zapisanym numerem dokumentu (pamiętamy, że na listach postingowych przechowywane są różnice między numerami dokumentów). Potencjalnie więc trzeba będzie zawsze odkodowywać cały pierwszy blok listy postingowej. W sytuacji, w której dany term rzadko występuje w zbiorze dokumentów (a więc odpowiadające mu listy postingowe są krótkie, składają się z jednego bloku), optymalizacja w ogóle nie zostanie wykorzystana.
+ \item Rozwiązanie zaproponowane w \ref{sec:solution} dotyczy najprostszego przypadku indeksowania: w  indeksie pamiętane są jedynie numery dokumentów, bez częstości występowania termu i dodatkowych informacji (\texttt{IndexOptions.DOCS\_ONLY}). Należy także ustalić, w jaki sposób radzić sobie z pozostałymi przypadkami. Jest to jednak problem natury czysto implementacyjnej.
+ \item Zakładamy, że jeśli w danym bloku występuje mała liczba dokumentów usuniętych, to blok także jest przepisywany bez odkodowywania. Wobec tego należy opracować sposób zapisywania numerów ,,martwych'' dokumentów w nowej generacji segmentu -- do tego warto byłoby wykorzystać część kodeka zwaną \texttt{LiveDocsFormat}.
+ \item \emph{Problem niezapełnionego bloku}: rozważmy następującą sytuację: podczas przepisywania długiej listy postingowej natrafiamy na blok z dużą liczbą dokumentów usuniętych (większą niż maksymalna dopuszczalna liczba ,,martwych'' dokumentów w bloku). Należy więc przepisać ten blok ,,starym'' sposobem: element po elemencie, z pominięciem niektórych wartości. Okazuje się, że w takim wypadku blok będzie krótszy niż wymagane 128 postingów (o ile nie jest to ostatni blok listy, kodowany przy pomocy formatu \texttt{vInt}) -- co spowodowałoby sytuację, w której wszystkie kolejne bloki musiałyby być przepisywane ,,po staremu'' i optymalizacja w ogóle nie zostałaby wykorzystana. Rozwiązaniem w tym wypadku byłoby ,,dopełnienie'' niepełnego bloku specjalnymi wartościami, które nie mogą występować na listach postingowych (np. zerami). W dłuższej perspektywnie mogłoby to jednak doprowadzić do stanu, w którym większość list postingowych jest ,,pusta'' -- zawiera więcej dziur niż istotnych wartości. Możemy więc stwierdzić, że rozwiązanie z \ref{sec:solution} sprawdzi się tylko w systemach, w których nie spodziewamy się częstego usuwania dokumentów.
+\end{enumerate}

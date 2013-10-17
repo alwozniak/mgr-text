@@ -26,11 +26,9 @@ Operacje na indeksie (dodawanie, usuwanie lub modyfikowanie dokumentów, wyszuki
 \section{Struktura kodeka}
 \label{sec:codecStructure}
 
-[Uzupełnić: kodek jest klasą o konkretnym interfejsie, ładowanie przez Java SPI.]
+Kodek jest klasą o rozszerzającą abstrakcyjny \texttt{Codec}. Dzięki wykorzystaniu mechanizmu Java Service Provider Interface istnieje możliwość wykorzystania własnego kodeka lub wyboru jednego z dostarczonych.
 
-Aby zaimplementować własny kodek, należy przeciążyć abstrakcyjną klasę \texttt{Codec}, gromadzącą poszczególne jego elementy (tzw. formaty).
-
-Każdy kodek składa się z ośmiu części, które luźno odpowiadają plikom zapisywanym na dysku (tzn. przyjmuje się, że każda część kodeka zapisuje i odczytuje swój plik -- nie jest to jednak konieczność). Istnieje możliwość łączenia istniejących rozwiązań z własnymi implementacjami -- można skorzystać z domyślnych implementacji większości elementów kodeka i podmienić np. tylko część odpowiedzialną za kodowanie list postingowych.
+Klasa \texttt{Codec} gromadzi (i dostarcza) tzw. formaty: klasy odpowiedzialne za zapis i odczyt poszczególnych części indeksu. Każdy kodek składa się z ośmiu części, które luźno odpowiadają plikom zapisywanym na dysku (tzn. przyjmuje się, że każda część kodeka zapisuje i odczytuje swój plik -- nie jest to jednak konieczność). Istnieje możliwość łączenia istniejących rozwiązań z własnymi implementacjami -- można skorzystać z domyślnych implementacji większości elementów kodeka i podmienić np. tylko część odpowiedzialną za kodowanie list postingowych.
 
 Elementy, na które składa się kodek to:
 \begin{enumerate}
@@ -55,7 +53,7 @@ Zmiany, poza rozdzieleniem formatu zapisu indeksu do plików od architektury, do
 
 Najbardziej nadrzędnym elementem dostępu do indeksu jest pole (\texttt{Field}). W uproszczeniu, dla każdego indeksu (bądź jego abstrakcji) możemy pobrać listę jego pól (przedstawione tutaj jako \texttt{FieldsEnum}, implementowane jako \texttt{Fields}). Pole, poza tytułem, posiada listę termów, do której mamy dostęp poprzez iterator \texttt{TermsEnum}. Dla każdego termu możemy pobrać listę dokumentów, w których on wystąpił (\texttt{DocsEnum}), a dla każego z dokumentów -- listę pozycji wystąpień (\texttt{PositionsEnum} -- jak zostanie to omówione później, w faktycznej implementacji iteratory \texttt{DocsEnum} i \texttt{PositionsEnum} są zaimplementowane jako jedna klasa).
 
-Powyższy schemat nie oddaje faktycznej architektury dostępu do elementów indeksu -- jest jedynie jej nakreśleniem. Rysunek poniżej (\ref{fig:indexApi}) ilustruje, w jaki sposób koncepcja czterowymiarowego API została przełożona na abstrakcyjne klasy Lucene Core. [Do uzupełnienia: to jest właśnie definicja serwisu, który ma być dostarczony przez SPI] Programista chcący zaimplementować własny kodek musi stworzyć swoją hierarchię klas zgodnie z tą strukturą.
+Schemat \ref{fig:4dimAPI} nie oddaje faktycznej architektury dostępu do elementów indeksu -- jest jedynie jej nakreśleniem. Rysunek poniżej (\ref{fig:indexApi}) ilustruje, w jaki sposób koncepcja czterowymiarowego API została przełożona na abstrakcyjne klasy Lucene Core. Diagram ilustruje niezbędne klasy oraz powiązania pomiędzy nimi -- stanowi definicję serwisu (posługując się definicją Java SPI, jest to \emph{Service Interface}). Zatem programista chcący zaimplementować własny kodek musi stworzyć swoją hierarchię klas zgodnie z tą strukturą.
 
 \begin{figure}[here]
  \includegraphics[scale=0.64]{pictures/LuceneAccessAPI_1.jpg}
@@ -121,7 +119,7 @@ Format list postingowych jest miejscem, które najprawdopodobniej zmieniłby pro
 
 Jak zostało wspomniane w sekcji \ref{sec:codecStructure}, za format list postingowych odpowiada klasa \texttt{PostingsFormat}. Jej głównym zadaniem jest dostarczenie i zarządzanie cyklem życia dwóch obiektów: \texttt{FieldsProducer} i \texttt{FieldsConsumer}, które są odpowiedzialne za, odpowiednio, odczyt i zapis danych z plików indeksu. Architekturę formatu list postingowych przedstawia rys. \ref{fig:postingFormat}.
 
-\begin{figure}[here]
+\begin{figure}[p]
  \includegraphics[scale=0.65]{pictures/PostingsFormat_1.jpg}
  \caption{Schemat klas służących do zapisu formatu list postingowych. Źródło: opracowanie własne.\label{fig:postingFormat}}
 \end{figure}
@@ -134,12 +132,20 @@ Wywołanie \texttt{TermsConsumer.startTerm()} zwraca obiekt \texttt{PostingsCons
 
 Oczywiście, wszystkie klasy diagramu \ref{fig:postingFormat} są abstrakcyjne -- wymienione operacje (takie jak dodawanie pola, termu lub dokumentu) muszą być oprogramowane w klasach kodeka. Klasy \texttt{FieldsConsumer}, \texttt{TermsConsumer}, \texttt{PostingsConsumer} posiadają jedynie implementacje metod \texttt{merge()}: według projektantów Lucene łączenie poszczególnych elementów indeksu powinno być niezależne od faktycznego formatu zapisu. Nic jednak nie stoi na przeszkodzie, aby kodek nadpisywał także tę funkcjonalność.
 
-[Tutaj: klasy w obecnym kodeku implementujące te wszystkie funkcjonalności -- opis. Opowiedzenie o tym, że skomplikowanie architektury z rys. \ref{fig:postingFormatRead} i \ref{fig:postingFormatWrite} służy temu, aby można było podmieniać także format słowników termów.]
+Należy pamiętać, że powiązania pomiędzy klasami i funkcjonalności zaprezentowane na \ref{fig:indexApi} i \ref{fig:postingFormat} są jedynie definicjami usługi (posługując się znów terminologią związaną z Java SPI). Faktyczne jej realizacje okazują się być bardziej skomplikowane. Rysunek \ref{fig:postingFormatRead} przedstawia strukturę klas do odczytu danych z indeksu wykorzystywaną w obecnie domyślnym kodeku. Przyjrzyjmy się jej bliżej.
+
+\texttt{BlockTreeTermsReader} jest realizacją klasy \texttt{FieldsProducer} -- jest więc odpowiedzialny za wyliczanie termów należących do danego pola. Jego nazwa wywodzi się z tego, że słownik termów w obecnej wersji Lucene jest trzymany w postaci zbioru bloków, co powoduje przyspieszenie odczytu i zapisu danych (operujemy na blokach danych, a nie na pojedynczych wartościach). 
+
+\texttt{BlockTreeTermsReader} do tworzenia swoich rozszerzeń klas \texttt{Terms} i \texttt{TermsEnum} wykorzystuje swoje wewnętrzne klasy: \texttt{FieldReader} oraz (zdefiniowany w \texttt{FieldReader}) \texttt{SegmentTermsEnum}. Agreguje ponadto instancję typu \texttt{PostingsReaderBase} (w przypadku domyślnego kodeka jest to \texttt{Lucene41PostingsReader}). Zauważmy, że samo \texttt{PostingsReaderBase} nie rozszerza \texttt{TermsEnum}, ale posiada metody służące do wyliczania dokumentów należących do danego termu (\texttt{docs()} oraz \texttt{docsAndPositions()}). Nieprzypadkowo metody te posiadają taką samą sygnaturę, jak odpowiadające im metody z \texttt{TermsEnum} -- \texttt{PostingsReaderBase} deleguje bowiem pobranie list dokumentów dla danego termu do instancji klasy \texttt{SegmentTermsEnum}, utworzonej przez \texttt{FieldsReader}.
+
+Takie rozwiązanie pozwala na oddzielenie formatu słownika termów (za odczyt których odpowiada sam \texttt{BlockTreeTermsReader}) od formatu list postingowych. Ponieważ \texttt{PostingsReaderBase} jest \emph{wstrzykiwany} poprzez konstruktor do \texttt{BlockTreeTermsReader}, istnieje łatwa możliwość podmiany części biblioteki odpowiedzialnej za odczyt postingów. Innymi słowy, odczyt list postingowych jest uniezależniony od odczytu słownika termów.
 
 \begin{figure}[here]
  \includegraphics[scale=0.62]{pictures/Lucene41PostingsFormatRead_1.jpg}
  \caption{Odczyt list postingowych i innych informacji z indeksu odwróconego: schemat klas wykorzystywanych przez domyślny kodek. Źródło: opracowanie własne. \label{fig:postingFormatRead}}
 \end{figure}
+
+To samo tyczy się zapisu: dzięki wstrzyknięciu instancji typu \texttt{PostingsWriterBase} do \texttt{BlockTreeTermsWriter} zapis list postingowych jest niezależny od zapisu słownika termów.
 
 \begin{figure}[here]
  \includegraphics[scale=0.64]{pictures/Lucene41PostingsFormatWrite.jpg}
@@ -162,6 +168,7 @@ Listy postingowe kodowane są blokami dwóch rodzajów. Wszystkie bloki (być mo
 Lista postingowa jest skip listą: istnieje możliwość ,,przeskakiwania'' w niej o całe bloki. Wskaźniki skip list zapisywane są na początku każdego bloku (z wyjątkiem pierwszego).
 
 \subsection{Kodowanie bloków upakowanych}
+\label{sec:packedBlockEncoding}
 
 Każdy blok upakowany (\emph{PackedBlock}) składa się z dwóch części: 
 \begin{enumerate}
@@ -176,6 +183,7 @@ Dodatkowo, jeśli wszystkie \emph{d-gaps} są takie same (np. jeśli dany term w
 Wedle podobnego schematu kodowana jest część zawierająca częstości wystąpień termu w dokumencie -- z pominięciem obliczania \emph{d-gaps}, które tutaj nie są potrzebne.
 
 \subsection{Kodowanie \texttt{vInt}}
+\label{sec:vIntEncoding}
 
 W tym formacie kodowania informacje o numerze dokumentu oraz o częstości występowania termu są zakodowane naprzemiennie (tzn. jeśli częstość występowania termu w danym dokumencie jest większa niż 1, kodowana jest jako kolejna liczba na liście). 
 
