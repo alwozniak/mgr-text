@@ -87,9 +87,9 @@ W przykładzie z pierwszego rozdziału przedstawiono prosty odczyt indeksu przy 
  \caption{Struktura klas dostępu do indeksu: \texttt{IndexReader} oraz klasy potomne. Źródło: opracowanie własne. \label{fig:indexReader}}
 \end{figure}
 
-Abstrakcyjny \texttt{IndexReader}, stojący na szczycie tej hierarchii, dostarcza tylko najbardziej podstawowych funkcji, wspólnych wszystkim klasom odczytującym (takich jak zamykanie indeksu -- metoda \texttt{close()}, obliczanie prostych statystyk, liczby dokumentów w indeksie, informacji o tym, czy dany indeks posiada dokumenty usunięte, itp.). 
+Abstrakcyjny \texttt{IndexReader}, stojący na szczycie tej hierarchii, dostarcza tylko najbardziej podstawowych funkcji, wspólnych wszystkim klasom odczytującym (takich jak zamykanie indeksu -- metoda \texttt{close()}, obliczanie prostych statystyk: liczby dokumentów w indeksie, informacji o tym, czy dany indeks posiada dokumenty usunięte, itp.). 
 
-\texttt{IndexReader} nie ma dostępu do zawartości indeksu odwróconego -- poprzez jego interfejs można uzyskać jedynie wartości pól przechowywanych (\emph{stored fields}). Wszystkie inne zaindeksowane informacje muszą zostać pobrane z jego rozszerzeń. Taka decyzja architektoniczna podyktowana jest chęcią uproszczenia procesu wyszukiwania z punktu widzenia programisty: użytkownik Lucene nie musi tak naprawdę nic wiedzieć o indeksie odwróconym, zaindeksowanych termach czy listach postingowych. Wystarczy, że poda bibliotece odpowiednio skonstruowane zapytanie i odbierze wyniki w postaci listy referencji do pasujących dokumentów. Wartości pól przechowywanych mogą być mu przydatne do zaprezentowania wyników. Projektanci Lucene zdecydowali, że najogólniejsza klasa dostępu do indeksu będzie posiadała ograniczone funkcjonalności.
+\texttt{IndexReader} nie ma dostępu do zawartości indeksu odwróconego -- poprzez jego interfejs można uzyskać jedynie wartości pól przechowywanych (\emph{stored fields}). Wszystkie inne zaindeksowane informacje muszą zostać pobrane z jego rozszerzeń. Taka decyzja architektoniczna podyktowana jest chęcią uproszczenia procesu wyszukiwania z punktu widzenia programisty: użytkownik Lucene nie musi tak naprawdę nic wiedzieć o indeksie odwróconym, zaindeksowanych termach czy listach postingowych. Wystarczy, że poda bibliotece odpowiednio skonstruowane zapytanie i odbierze wyniki w postaci listy referencji do pasujących dokumentów (wartości pól przechowywanych mogą być mu przydatne do zaprezentowania wyników). Zatem projektanci Lucene zdecydowali, że najogólniejsza klasa dostępu do indeksu będzie posiadała ograniczone funkcjonalności.
 
 Z \texttt{IndexReadera} wywiedzione są dwie abstrakcyjne klasy: \texttt{AtomicReader} oraz \texttt{CompositeReader}. \texttt{AtomicReader} umożliwia dostęp do indeksu na poziomie segmentu. Pozwala na pobranie informacji o indeksie odwróconym: o zaindeksowanych termach, polach, postingach, czy \emph{docValues}. Dlatego, m.in., jego implementacje (najczęściej \texttt{SegmentReader}) są niezbędne podczas łączenia segmentów i innych wewnętrznych operacji.
 
@@ -97,13 +97,18 @@ Ponieważ w większości przypadków indeks składa się z kilkunastu -- kilkudz
 
 \texttt{CompositeReaders} pozwalają też na dostęp do swoich elementów: można je wylistować przy pomocy metody \texttt{CompositeReader.getSequentialSubReaders()} -- zatem programista chcący uzyskać np. listę termów zaindeksowanych w indeksie dyskowym ma możliwość odczytania list z poszczególnych ,,readerów atomowych''.
 
-Innym sposobem uzyskania funkcjonalności \texttt{AtomicReadera} dla ,,readera złożonego'' jest skorzystanie z klasy \texttt{SlowCompositeReaderWrapper}, która poprzez metodę \texttt{wrap()} przyjmuje instancję \texttt{CompositeReadera} i w wyniku zwraca obiekt ,,udający'' \texttt{AtomicReader}. Wewnątrz sekwencyjnie ,,przechodzi'' po wszystkich zagregowanych \texttt{AtomicReaderach} i w locie łączy pobrane z nich dane.
+Innym sposobem uzyskania funkcjonalności \texttt{AtomicReadera} dla ,,readera złożonego'' jest skorzystanie z klasy \texttt{SlowCompositeReaderWrapper}, która poprzez metodę \texttt{wrap()} przyjmuje instancję \texttt{CompositeReadera} i w wyniku zwraca obiekt ,,udający'' \texttt{AtomicReader}. Wewnątrz sekwencyjnie ,,przechodzi'' po wszystkich zagregowanych \texttt{AtomicReaderach} i w locie łączy pobrane z nich dane. Dokumentacja Lucene odradza jednak korzystanie z tego rozwiązania.
 
 \subsection{\texttt{IndexReaderContext}}
 
-W działającym programie wykorzystującym Lucene instancje typu \texttt{IndexReader} tworzą strukturę drzewiastą, w której węzłami są implementacje klasy \texttt{CompositeReader} a liśćmi -- \texttt {AtomicReader}. Każdy element tej struktury posiada informacje o ,,swoim'' fragmencie indeksu (swoim segmencie, katalogu z plikami indeksu, itp.). W związku z tym, że np. dodawane dokumenty są indeksowane od 0 w obrębie każdego segmentu, mogą wystąpić problemy ze spójnością numeracji wewnątrz \texttt{CompositeReaderów}. Należy rozwiązać kwestie takie jak: która klasa ma pamiętać kolejność \texttt{AtomicReaderów} wewnątrz kompozytu? Gdzie powinny być przechowywane podstawy przenumerowania dokumentów z danego segmentu? Trzymanie takich informacji wewnątrz \texttt{CompositeReadera} byłoby nałożeniem na niego dodatkowej odpowiedzialności.
+W działającym programie wykorzystującym Lucene instancje typu \texttt{IndexReader} tworzą strukturę drzewiastą, w której węzłami są implementacje klasy \texttt{CompositeReader} a liśćmi -- \texttt {AtomicReader}. Każdy element tej struktury posiada informacje o ,,swoim'' fragmencie indeksu (swoim segmencie, katalogu z plikami indeksu, itp.). W związku z tym, że np. dodawane dokumenty są indeksowane od zera w obrębie każdego segmentu, mogą wystąpić problemy ze spójnością numeracji wewnątrz \texttt{CompositeReaderów}. Projektanci biblioteki musieli wobec tego zdecydować, której klasie przydzielona zostanie odpowiedzialność za zarządzanie całą strukturą. Między innymi, rozwiązania wymagały następujące problemy: 
+\begin{itemize}  
+ \item która klasa ma pamiętać kolejność \texttt{AtomicReaderów} wewnątrz kompozytu?
+ \item gdzie powinny być przechowywane podstawy przenumerowania dokumentów z danego segmentu?
+\end{itemize}
+Trzymanie takich informacji wewnątrz \texttt{CompositeReadera} byłoby naruszeniem zasad projektowania obiektowego (w szczególności, zasady SRP -- \emph{Single Responsibility Principle}).
 
-Bardziej eleganckim z punktu widzenia zasady pojedynczej odpowiedzialności rozwiązaniem jest wprowadzenie dodatkowej hierarchii klas -- kontekstów. Ich zadaniem jest przechowywanie informacji o strukturze i kolejności klas odczytujących indeks. Każda instancja typu \texttt{IndexReader} posiada obiekt \texttt{IndexReaderContext} (lub wywiedziony). Hierarchia kontekstów oraz możliwe na niej operacje są przedstawione na rys. \ref{fig:indexReaderContexts}. 
+Eleganckim rozwiązaniem w tym wypadku okazało się wprowadzenie dodatkowej hierarchii klas -- kontekstów. Ich zadaniem jest przechowywanie informacji o strukturze i kolejności klas odczytujących indeks. Każda instancja typu \texttt{IndexReader} posiada obiekt \texttt{IndexReaderContext} (lub wywiedziony). Hierarchia kontekstów oraz możliwe na niej operacje są przedstawione na rys. \ref{fig:indexReaderContexts}. 
 
 \begin{figure}[here]
  \centering
@@ -111,7 +116,7 @@ Bardziej eleganckim z punktu widzenia zasady pojedynczej odpowiedzialności rozw
  \caption{Struktura kontekstów \texttt{IndexReader}. Źródło: opracowanie własne. \label{fig:indexReaderContexts}}
 \end{figure}
 
-Każdy \texttt{IndexReaderContext} potrafi wylistować konteksty readerów potomnych, konteksty liści drzewa readerów oraz wskazać konkretną instancję typu \texttt{IndexReader}, do której jest przypisany. Dodatkowo, konteksty instancji \texttt{AtomicReader} pamiętają wartość \texttt{docBase} -- bazę przenumerowania dokumentów oraz swój numer w wewnętrznej tablicy nadrzędnego \texttt{CompositeReadera} (wartość \texttt{ord}).
+Każdy \texttt{IndexReaderContext} potrafi wylistować konteksty readerów potomnych, konteksty liści drzewa readerów oraz wskazać konkretną instancję typu \texttt{IndexReader}, do której jest przypisany. Dodatkowo, konteksty instancji \texttt{AtomicReader} pamiętają wartość \texttt{docBase} -- bazę przenumerowania dokumentów oraz swój numer w wewnętrznej tablicy nadrzędnego \texttt{CompositeReadera} (wartość \texttt{ord}). Dzięki temu wiadomo, w jakiej kolejności powinny być przeglądane poszczególne instancje typu \texttt{IndexReader}.
 
 \section{Implementacja własnego kodeka}
 
