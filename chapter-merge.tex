@@ -102,7 +102,7 @@ Różne typy i różne instancje przechowujące dane o listach postingowych są 
 
 Łączenie list postingowych jest zaimplementowane w metodzie \texttt{merge()} klasy \texttt{PostingsConsumer}. Metoda ta przyjmuje następujące parametry, przekazywane z \texttt{TermsConsumer.merge()}:
 \begin{itemize}
- \item \texttt{MergeState}: tutaj niepotrzebny, nigdzie nie używany. Prawdopodobnie jest to pozostałość po starej implementacji i zostanie usunięta w najbliższym czasie.
+ \item \texttt{MergeState}: przekazany z instancji \texttt{TermsConsumera}. Przydatny będzie do uzyskania informacji o dokumentach usuniętych.
  \item \texttt{IndexOptions}: podobnie, jak w przypadku łączenia termów, dokładny algorytm zależy od wybranej opcji indeksowania.
  \item \texttt{DocsEnum}: reprezentacja list dokumentów, które mają być połączone. Obecny kodek wykorzystuje \texttt{MappingMultiDocsEnum} lub \texttt{MappingMultiDocsAndPositionsEnum}, w zależności od opcji indeksowania (i instancji przekazanej tutaj z \texttt{TermsConsumer.merge()}). 
  \item \texttt{FixedBitSet}: zbiór bitowy reprezentujący odwiedzone już dokumenty.
