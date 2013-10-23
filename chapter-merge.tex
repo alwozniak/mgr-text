@@ -2,9 +2,9 @@
 
 Niezależnie od formatu zapisu plików indeksu, łączenie segmentów odbywa się według tego samego algorytmu. Za proces ten odpowiedzialna jest metoda \texttt{merge()} klasy \texttt{SegmentMerger} (klasa ta nie jest widoczna poza swoim pakietem -- nie można jej nadpisać ani rozszerzyć w implementacji swojego kodeka). Oto kolejność łączenia poszczególnych elementów segmentu:
 \begin{enumerate}
- \item łączenie \texttt{FieldInfos},
- \item łączenie \texttt{Fields},
- \item łączenie \texttt{Terms}: łączenie list postingowych przypisanych do termów,
+ \item łączenie \texttt{FieldInfos} -- metadanych związanych z poszczególnymi polami,
+ \item łączenie \texttt{StoredFields}, pól przechowywanych,
+ \item \label{item:postingMerge} łączenie \texttt{Terms}: łączenie list postingowych dla poszczególnych termów w ramach jednego pola,
  \item łączenie \texttt{DocValues} (o ile zostały zaindeksowane),
  \item łączenie norm (o ile zostały zaindeksowane),
  \item łączenie \texttt{TermVectors} (o ile zostały zaindeksowane).
@@ -18,14 +18,16 @@ Cały proces przebiega rekurencyjnie, po strukturze indeksu przedstawionej na ry
 
 \section{Łączenie pól}
 
-Algorytm łączenia pól pochodzących z różnych segmentów ilustruje rys. \ref{fig:fieldMerge}. Dla każdego z łączonych segmentów pobrany jest \texttt{AtomicReader}. Na jego podstawie utworzona zostaje instancja klasy \texttt{ReaderSlice}, przechowująca następujące informacje:
+Łączenie pól odbywa się w metodzie \texttt{merge()} klasy \texttt{FieldsConsumer}. Tam bowiem przekazywane jest sterowanie z \texttt{SegmentMerger.merge()} na etapie łączenia pól, termów i list postingowych (krok \ref{item:postingMerge} z poprzednej sekcji). 
+
+Samo połączenie pól pochodzących z różnych segmentów polega na utworzeniu instancji typu \texttt{MultiFields}, co zilustrowane jest na rys. \ref{fig:fieldMerge}. Dla każdego z łączonych segmentów pobierana jest instancja typu \texttt{AtomicReader} (a dokładniej: \texttt{SegmentReader}, por. \ref{sec:indexReader}). Na jego podstawie utworzona zostaje instancja klasy \texttt{ReaderSlice}, przechowująca następujące informacje:
 \begin{enumerate}
- \item \texttt{docBase}: pierwszy numer, jaki zostanie nadany dokumentowi pochodzącego z obecnego \texttt{AtomicReadera} i zapisanego w wynikowym segmencie. W obrębie jednego segmentu numery dokumentów (\emph{docId}) są unikalne i zaczynają się od 0. W związku z tym podczas łączenia dokumenty z co najmniej jednego segmentu muszą zostać przenumerowane. Do tego właśnie służy \texttt{docBase}: zostanie ona dodana do wszystkich \emph{docId} danego segmentu. Wartość \texttt{docBase} dla pierwszego z łączonych segmentów wynosi 0, dla każdego kolejnego jest równa łącznej liczbie dokumentów z poprzednich segmentów;
+ \item \texttt{docBase}: pierwszy numer, jaki zostanie nadany dokumentowi pochodzącego z obecnego \texttt{AtomicReadera} i zapisanego w wynikowym segmencie. W obrębie jednego segmentu numery dokumentów (\emph{docId}) są unikalne i zaczynają się od 0. W związku z tym, podczas łączenia dokumenty z co najmniej jednego segmentu muszą zostać przenumerowane. Do tego właśnie służy \texttt{docBase}: zostanie ona dodana do wszystkich \emph{docId} danego segmentu. Wartość \texttt{docBase} dla pierwszego z łączonych segmentów wynosi 0, dla każdego kolejnego jest równa łącznej liczbie ,,żywych'' (nieusuniętych) dokumentów z poprzednich segmentów;
  \item \texttt{maxDoc}: liczba dokumentów zaindeksowanych w danym segmencie;
  \item \texttt{readerIndex}: numer porządkowy segmentu.
 \end{enumerate}
 
-Z każdego \texttt{AtomicReadera} pobrana jest także instancja \texttt{Fields}. Tablice z odpowiadającymi sobie instancjami \texttt{ReaderSlice} oraz \texttt{Fields} służą do zainicjalizowania klasy \texttt{MultiFields}, służącej jako agregat pól.
+Z każdego \texttt{AtomicReadera} pobrana jest także instancja \texttt{Fields}. Tablice z odpowiadającymi sobie instancjami \texttt{ReaderSlice} oraz \texttt{Fields} służą do zainicjalizowania klasy \texttt{MultiFields}, służącej jako agregat pól -- będzie ona wykorzystana w dalszej części procesu.
 
 \begin{figure}[here]
  \includegraphics[scale=0.4]{pictures/LaczeniePol.png}
@@ -34,16 +36,18 @@ Z każdego \texttt{AtomicReadera} pobrana jest także instancja \texttt{Fields}.
 
 \section{\texttt{MultiFields}}
 
-\texttt{MultiFields} jest rozszerzeniem klasy \texttt{Fields}. Grupuje w sobie reprezentacje pól pochodzących z różnych segmentów i pozwala na operowanie ich zawartością tak, jakby były to pola pobrane z jednego segmentu. Jego schemat (oraz schematy klas powiązanych) przedstawia rys. \ref{multiFields}.
+W procesie łączenia list postingowych mamy do czynienia ze specyficznymi rozszerzeniami klas \texttt{Fields}, \texttt{Terms} i \texttt{DocsEnum}. Są to \texttt{MultiFields}, \texttt{MultiTerms} oraz \texttt{MultiDocsEnum} i jej pochodne. Stanowią one agregatory wielu instancji, odpowiednio, \texttt{Fields}, \texttt{Terms}, \texttt{DocsEnum} i ich zadaniem jest takie operowanie tymi wewnętrznymi instancjami, aby inne klasy ,,nie wiedziały'' że mają do czynienia z agregatem. Innymi słowy, klasy \texttt{MultiX} przedstawiają zbiór swoich instancji \texttt{X} w taki sposób, jakby był to pojedynczy obiekt typu \texttt{X}. \texttt{MultiX} dziedziczy zatem interfejs klasy \texttt{X} (gdzie \texttt{X} oznacza, odpowiednio, \texttt{Fields}, \texttt{Terms} lub \texttt{DocsEnum}).
+
+\texttt{MultiFields} jest najbardziej ogólną z takich klas. Zgodnie z tym, co zostało powiedziane w poprzednim akapicie, jest ona rozszerzeniem klasy \texttt{Fields}. Ponadto grupuje w sobie reprezentacje pól pochodzących z różnych segmentów i pozwala na operowanie ich zawartością tak, jakby były to pola pobrane z jednego segmentu. Jej schemat (oraz schematy klas powiązanych) przedstawia rys. \ref{multiFields}.
 
 \begin{figure}[here]
  \includegraphics[scale=0.65]{pictures/MultiFields_2.jpg}
  \caption{\texttt{MultiFields} oraz klasy powiązane. Źródło: opracowanie własne.\label{multiFields}}
 \end{figure}
 
-To, że \texttt{MultiFields} jest rozszerzeniem klasy \texttt{Fields} oznacza, że posiada wszystkie jej funkcjonalności i w ich obrębie posługuje się takim samym interfejsem. Z punktu widzenia klasy zarządzającej procesem łączenia segmentów (\texttt{SegmentMergera}) zachowuje się więc dokładnie jak \texttt{Fields}. Jest to przykład dobrego podziału odpowiedzialności pomiędzy klasami i ukrywania wewnętrznej implementacji.
+To, że \texttt{MultiFields} jest rozszerzeniem klasy \texttt{Fields} oznacza, że posiada wszystkie jej funkcjonalności i w ich obrębie posługuje się takim samym interfejsem. Z punktu widzenia klasy zarządzającej procesem łączenia segmentów (\texttt{SegmentMergera}) zachowuje się więc dokładnie jak \texttt{Fields} (o tym właśnie była mowa w pierwszym akapicie tej sekcji). Jest to przykład dobrego podziału odpowiedzialności pomiędzy klasami i ukrywania wewnętrznej implementacji.
 
-Z punktu widzenia algorytmu łączenia segmentów, najbardziej interesującymi metodami \texttt{MultiFields} są \texttt{MultiFields.terms(String field)}, zwracająca termy należące do pola o podanej nazwie oraz \texttt{MultiFields.iterator()}, zwracająca iterator pozwalający na przechodzenie po kolejnych nazwach pól. 
+Z punktu widzenia algorytmu łączenia segmentów, najbardziej interesującymi metodami \texttt{MultiFields} są \texttt{MultiFields.terms(String field)}, zwracająca termy należące do pola o podanej nazwie oraz \texttt{MultiFields.iterator()}, zwracająca iterator pozwalający na przechodzenie po kolejnych nazwach pól. Gdy definicje pól zostaną już połączone, w ramach każdego z nich zostaną połączone termy. A termy dla danego pola o nazwie \texttt{fieldName} one zostaną zwrócone właśnie przez \texttt{MultiFields.terms(String fieldName)}.
 
 \section{\texttt{MultiFields.terms()}}
 
