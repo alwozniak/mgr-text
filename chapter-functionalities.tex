@@ -5,17 +5,17 @@ W niniejszym rozdziale zostaną przedstawione główne funkcjonalności Lucene: 
 %-----------------------------------------------------
 \section{Przygotowanie do indeksowania: analiza tekstu}
 
-Lucene przechowuje dane w strukturze zwanej \emph{indeksem odwróconym}. Zanim jednak indeksowany tekst trafi do tej struktury, musi przejść przez proces analizy. Indeks odwrócony budowany jest na bazie tzw. \emph{tokenów}, które możemy dla uproszczenia zdefiniować jako podstawowe formy słów poddawane indeksowaniu. Proces indeksowania polega, w ogólności, na utworzeniu strumienia tokenów na podstawie zadanego tekstu. Może on obejmować takie operacje jak odfiltrowanie stop-words, sprowadzenie słowa do jego formy podstawowej (poprzed stemming lub przy użyciu analizy morfologicznej), czy wykrycie i zaindekowanie synonimów. 
+Lucene przechowuje dane w strukturze zwanej \emph{indeksem odwróconym}. Zanim jednak indeksowany tekst trafi do tej struktury, musi przejść przez proces analizy. Indeks odwrócony budowany jest na bazie tzw. \emph{tokenów}, które możemy dla uproszczenia zdefiniować jako podstawowe formy słów poddawane indeksowaniu. Proces analizy polega, w ogólności, na utworzeniu strumienia tokenów na podstawie zadanego tekstu. Może on obejmować takie operacje jak odfiltrowanie stop-words, sprowadzenie słowa do jego formy podstawowej (poprzez stemming lub przy użyciu analizy morfologicznej), czy wykrycie i zaindeksowanie synonimów. 
 
-Analiza tekstu jest problemem nietrywialnym. Od narzędzi ją wykonujących wymagamy, aby różnorodne formy tego samego słowa (jak liczba mnoga, odmiany fleksyjne) były sprowadzone do tej samej bazy, aby poprawnie rozróżniały nazwy własne, numery, daty czy nazwiska. Oczywiście, istniejące obecnie rozwiązania nie spełniają tych wymagań w stu procentach.
+Analiza tekstu jest problemem nietrywialnym. Od narzędzi ją wykonujących wymagamy, aby różnorodne formy tego samego słowa (jak liczba mnoga, odmiany fleksyjne) były sprowadzone do tej samej bazy, aby poprawnie rozróżniane były nazwy własne, numery, daty czy nazwiska. Oczywiście, istniejące obecnie rozwiązania nie spełniają tych wymagań w stu procentach.
 
 Analiza tekstu w Lucene jest zazwyczaj wykonywana w dwóch sytuacjach: podczas indeksowania nowego dokumentu oraz podczas parsowania zapytań. Dodatkowo, tekst pobrany z indeksu może być niekiedy analizowany powtórnie (np. jeśli mają być w nim zaznaczone wystąpienia wyszukiwanych słów).
 
-W Lucene za analizę danych jest odpowiedzialna abstrakcyjna klasa \texttt{Analyzer} oraz implementacje, wśród których najpopularniejszym jest \texttt{StandardAnalyzer}. Istnieje także możliwość utworzenia własnego narzędzia analizy tekstu. 
+W Lucene za analizę danych jest odpowiedzialna abstrakcyjna klasa \texttt{Analyzer} oraz jej nieabstrakcyjne rozszerzenia, wśród których najpopularniejszym jest \texttt{StandardAnalyzer}. Istnieje także możliwość utworzenia własnego narzędzia analizy tekstu. 
 
 \subsection{Struktura Analyzera}
 
-\texttt{Analyzer} jest abstrakcyjną klasą definiującą zarys algorytmu analizy tekstu. Lucene dostarcza kilka jej uniwersalnych implementacji, które będą odpowiednie dla większości zastosowań. Najczęściej wykorzystywaną implementacją jest \texttt{StandardAnalyzer}.
+\texttt{Analyzer} jest abstrakcyjną klasą definiującą zarys algorytmu analizy tekstu. Lucene dostarcza kilku jej uniwersalnych implementacji, które dla większości zastosowań okazują się być wystarczające -- dlatego rzadko konieczne jest pisanie własnego \texttt{Analyzera}. Najczęściej wykorzystywaną implementacją jest \texttt{StandardAnalyzer}.
 
 Algorytm analizy tekstu składa się z trzech faz:
 \begin{enumerate}
@@ -28,16 +28,16 @@ Tworzenie własnego \texttt{Analyzera} polega na zaimplementowaniu (lub wykorzys
 
 \subsection{Ekstrakcja treści ze złożonych dokumentów}
 
-Jedyną formą danych akceptowaną przez Lucene jest czysty tekst. Lucene nie dostarcza żadnych narzędzi pozwalających na wyekstrahowanie tekstu z dokumentów o rozbudowanej strukturze (np. w formatach HTML, PDF, MS Word). To po stronie aplikacji używającej biblioteki leży odpowiedzialność parsowania złożonych dokumentów. 
+Jedyną formą danych akceptowaną przez Lucene jest czysty tekst. Lucene nie dostarcza żadnych narzędzi pozwalających na wyekstrahowanie tekstu z dokumentów o rozbudowanej strukturze (np. w formatach HTML, PDF, MS Word). Zatem odpowiedzialność parsowania złożonych dokumentów leży po stronie aplikacji wykorzystującej Lucene. 
 
 %---------------------------------------------------
 \section{Indeksowanie danych}
 
 Aby zrozumieć, w jaki sposób dane przechowywane są indeksie Lucene, wyjaśnimy na początku kilka pojęć:
 \begin{itemize}
- \item \emph{Term} -- jest podstawową jednostka wyszukiwania i indeksowania. Term jest ściśle związany z polem, w jakim występuje. Dlatego pojedynczy term utożsamiamy z parą nazwa pola--słowo.
+ \item \emph{Term} -- jest podstawową jednostka wyszukiwania i indeksowania. Term jest ściśle związany z polem, w jakim występuje. Dlatego pojedynczy term utożsamiamy z parą \emph{nazwa pola:słowo}.
  \item \emph{Pole} -- jest to zbiór termów, oznaczony identyfikującą go nazwą i posiadający określony typ. Pole posiada też pewne parametry wskazujące, jak jego zawartość (lista należących do niego termów) powinna być traktowana podczas indeksowania i wyszukiwania. Określa np. czy zawartość powinna być tokenizowania lub przechowywana w indeksie. Wartości tych parametrów są na ogół zależne od wybranego typu pola.
- \item \emph{Dokument} -- jest zbiorem pól. Jest identyfikowany przez swój numer, unikalny w obrębie segmentu. Dokumenty w Lucene nie mają narzuconej, sztywnej struktury. Oznacza to, że w obrębie jednego indeksu mogą występować dokumenty o całkowicie różnych polach. 
+ \item \emph{Dokument} -- jest zbiorem pól. Jest identyfikowany przez swój numer, unikalny w obrębie segmentu. Dokumenty w Lucene nie mają narzuconej, sztywnej struktury. Oznacza to, że w obrębie jednego indeksu mogą występować dokumenty o całkowicie różnych zbiorach pól. 
 \end{itemize}
 
 Dokumenty dodawane do Lucene są przechowywane w indeksie odwróconym, który mówiąc w uproszczeniu, jest strukturą mapującą termy na listy numerów dokumentów zawierających dany term. Na pojedynczy indeks może składać się wiele \emph{segmentów}. Segment jest sam w sobie w pełni funkcjonalnym indeksem -- podział indeksu na mniejsze jednostki pozwala m.in. na zrównoleglenie procesu wyszukiwania.
@@ -49,13 +49,13 @@ Lucene pozwala na utworzenie pól następujących typów:
  \item pola tekstowe: \texttt{TextField} i \texttt{StringField}. Pola obydwóch typów są indeksowane, różnica między nimi polega na tym, że \texttt{StringField} nie jest dzielone na tokeny -- cała jego zawartość traktowana jest jako pojedynczy token. Wobec tego nadaje się np. do przechowywania numerów identyfikacyjnych, nazwisk czy nazw państw. \texttt{TextField} jest polem indeksowanym i analizowanym -- zazwyczaj występuje jako główne pole dokumentu, przechowujące większą część treści. Opcjonalnie, obydwa typy pól tekstowych mogą być przechowywane w indeksie (\emph{stored fields}).
  \item pola numeryczne: \texttt{IntField}, \texttt{LongField}, \texttt{DoubleField}, \texttt{FloatField}. Pozwalają na indeksowanie wartości liczbowych oraz na późniejsze wyszukiwanie i filtrowanie po zakresach wartości. Każde pole typu numerycznego jest indeksowane jako drzewo trie.
  \item pole ,,przechowywane'', \texttt{StoredField}: pole, którego pełna zawartość jest przechowywana w indeksie i może być odzyskana podczas wyszukiwania. Tego typu pole zazwyczaj stosuje się do zapisu takich informacji jak tytuł czy abstrakt dokumentu, jego zawartość nie jest jednak ograniczona do tekstu -- \texttt{StoredField} może także przechowywać liczby lub wartości binarne.
- \item pola typu DocValues: \texttt{NumericDocValuesField}, \texttt{BinaryDocValuesField}, \texttt{SortedDocValuesField}, \texttt{SortedSetDocValuesField} -- jest to nowy typ pola, wprowadzony w wersji 4.0 Lucene. Zawartości pól typu DocValues nie są włączane do indeksu odwróconego -- a zatem nie można po nich wyszukiwać. Są natomiast przydatne podczas sortowania lub grupowania wyników wyszukiwania. W przeciwieństwie do indeksu odwróconego, który w uproszczeniu jest strukturą mapującą termy na listy indeksów dokumentów, DocValues zaimplementowane są jako struktura mapująca indeksy dokumentów na zadane wartości (typu zależnego od wybranej implementacji pola). DocValues są jedynie optymalizującym dodatkiem do Lucene -- funkcje, do jakich są wykorzystywane mogłyby zostać spełnione przez pola innych typów. Zaimplementowane są jednak w sposób pozwajający na szybkie pobieranie przechowywanych wartości dla każdego dokumentu.
+ \item pola typu DocValues: \texttt{NumericDocValuesField}, \texttt{BinaryDocValuesField}, \texttt{SortedDocValuesField}, \texttt{SortedSetDocValuesField} -- jest to nowy typ pola, wprowadzony w wersji 4.0 Lucene. Zawartości pól typu DocValues nie są włączane do indeksu odwróconego -- a zatem nie można po nich wyszukiwać. Są natomiast przydatne podczas sortowania lub grupowania wyników wyszukiwania. W przeciwieństwie do indeksu odwróconego, DocValues zaimplementowane są jako struktura mapująca indeksy dokumentów na zadane wartości (typu zależnego od wybranej implementacji pola). DocValues istnieją niezależnie od głównego indeksu. Są jedynie optymalizującym dodatkiem do Lucene -- funkcje, do jakich są wykorzystywane mogłyby zostać spełnione przez pola innych typów, kosztem czasu wykonania. 
 \end{enumerate}
 
 %----------------------------------------------
 \section{Operacje na indeksie}
 
-Podstawowym elementem, na którym operujemy podczas indeksowania jest dokument. Jak zostało to pokazane w pierwszym rozdziale, abstrakcją go opakowującą jest klasa \texttt{Document}. Dokumenty mogą być do indeksu dodawane, usuwane oraz odświeżane.
+Podstawowym elementem, na którym operujemy podczas indeksowania jest dokument. Jak zostało to pokazane w pierwszym rozdziale, abstrakcją go opakowującą jest klasa \texttt{Document}. Dokumenty mogą być do indeksu dodawane, usuwane z niego lub odświeżane w indeksie.
 
 \subsection{Dodawanie dokumentów}
 
@@ -65,8 +65,8 @@ Przykład dodawania dokumentów został zaprezentowany w pierwszym rozdziale pra
 
 Usuwanie dokumentów może odbyć się na jeden z trzech sposobów: 
 \begin{enumerate}
- \item usunięcie dokumentów zawierających określony term (lub zawierających jeden z podanego zbioru termów),
- \item usunięcie dokumentów pasujących do danego zapytania (lub pasujących do jednego zapytania z podanego zbioru),
+ \item usunięcie dokumentów zawierających określony term (lub zawierających co najmniej jeden z podanego zbioru termów),
+ \item usunięcie dokumentów pasujących do danego zapytania (lub pasujących do co najmniej jednego zapytania z podanego zbioru),
  \item usunięcie wszystkich dokumentów z indeksu.
 \end{enumerate}
 
@@ -85,7 +85,7 @@ Odświeżanie dokumentów odbywa się poprzez użycie metody \texttt{IndexWriter
 
 Ocena zgodności dokumentu z zapytaniem w Lucene odbywa się dwuetapowo: po wystosowaniu zapytania (przekazaniu obiektu typu \texttt{Query} do indeksu) identyfikowane są dokumenty pasujące do zapytania. Następnie dla każdego dokumentu z otrzymanej grupy obliczana jest miara dopasowania (tzw. \emph{score}). Zatem proces wykorzystuje dwa modele oceny znane z teorii wyszukiwania informacji: boolowski (faza pierwsza) oraz dowolny model oceny dopasowania dokumentu do zapytania (faza druga -- tutaj domyślnie wykorzystywany jest zmodyfikowany model przestrzeni wektorowej). 
 
-Przebieg obydwóch faz może być modyfikowany przez programistę. Można zaimplementować własny model oceny trafności dopasowania poprzez przeciążenie abstrakcyjnej klasy \texttt{Similarity} lub wskazanie jednej z dostarczonych implementacji. Lucene, poza domyślnym modelem przestrzeni wektorowej, dostarcza także implementacji kilku modeli probabilistycznych (Okapi BM25 model, DFR Similarity) lub wykorzystujących właściwości języka.
+Przebieg obydwóch faz może być modyfikowany przez programistę. Można zaimplementować własny model oceny trafności dopasowania poprzez przeciążenie abstrakcyjnej klasy \texttt{Similarity} lub wskazanie jednej z dostarczonych implementacji. Lucene, poza domyślnym modelem przestrzeni wektorowej, dostarcza także implementacji kilku modeli probabilistycznych (Okapi BM25, DFR Similarity) lub wykorzystujących właściwości języka.
 
 Możliwa jest także ingerencja w pierwszą fazę algorytmu, poprzez dostarczenie własnej implementacji klasy \texttt{Query}.
 
@@ -95,20 +95,20 @@ Możliwa jest także ingerencja w pierwszą fazę algorytmu, poprzez dostarczeni
 
 \subsection{Modyfikowanie funkcji oceny: boosting}
 
-Programista może wskazać, które pola, dokumenty bądź podzapytania są bardziej z jego punktu widzenia istotne. Twz. \emph{boosting} (czyli podbicie ważności danego elementu) może odbywać podczas indeksowania (wtedy wartości boost przechowywane są w indeksie) lub podczas wyszukiwania. 
+Programista może wskazać, które pola, dokumenty bądź podzapytania są bardziej z jego punktu widzenia istotne. Twz. \emph{boosting} (czyli podbicie ważności danego elementu) może odbywać podczas indeksowania (wtedy wartości \emph{boost} przechowywane są w indeksie, jako tzw. \emph{normy}) lub podczas wyszukiwania. Oczywiście, w pierwszym z wymienionych przypadków podbicie danego elementu w przypadku każdego wyszukiwania będzie wpływało na ocenę zgodności dokumentu z zapytaniem.
 
 %-------------------------------------------------------
 \section{Near real-time search}
 
 \emph{Near real-time search} (czyli prawie natychmiastowe wyszukiwanie) jest funkcjonalnością dodaną w wersji 2.9 Lucene. Umożliwia ona przeszukiwanie najnowszych zmian wprowadzonych do indeksu, nawet jeśli nie zostały one jeszcze zacommitowane. 
 
-Przypomnijmy, że w zaprezentowanym w rozdziale pierwszym przykładzie dokumenty najpierw zostały zaindeksowane i zacommitowane, a dopiero później można było je wyszukiwać. W rzeczywistych zastosowaniach programista często nie może sobie pozwolić na taki scenariusz: dokumenty powinny być dostępne natychmiast po ich dodaniu do indeksu, nawet jeśli commit (będący czasochłonną i kosztowną operacją, szczególnie jeśli wprowadzono w nim sporo zmian) się jeszcze nie zakończył. \emph{Near real-time search} pozwala w dowolnym momencie pobrać stanu indeksu -- wyszukiwanie w takim indeksie może być jednak wolniejsze niż w przypadku, w którym wyszukiwanie jest poprzedzone commitem. Każdy commit wiąże się bowiem z optymalizacją indeksu.
+Przypomnijmy, że w zaprezentowanym w rozdziale pierwszym przykładzie dokumenty najpierw zostały zaindeksowane i zacommitowane, a dopiero później można było je wyszukiwać. W rzeczywistych zastosowaniach programista często nie może sobie pozwolić na taki scenariusz: dokumenty powinny być dostępne natychmiast po ich dodaniu do indeksu, nawet jeśli commit (będący czasochłonną i kosztowną operacją, szczególnie jeśli wprowadzono w nim sporo zmian) się jeszcze nie zakończył. \emph{Near real-time search} pozwala w dowolnym momencie pobrać stanu indeksu -- wyszukiwanie może być jednak wolniejsze niż w przypadku, w którym jest ono poprzedzone commitem. Każdy commit wiąże się bowiem z optymalizacją indeksu.
 
 \subsection{Commit w Lucene}
 
 Commit w Lucene odbywa się według następującego schematu:
 \begin{enumerate}
- \item \emph{flush} -- wprowadzane zmiany są zapisywane na dysku,
+ \item \emph{flush} -- wprowadzane zmiany są zapisywane na dysku w postaci nowego segmentu (o ile spełnione są warunki wspomniane w sekcji \ref{sec:segments}) lub zapamiętywane w pamięci operacyjnej jako ,,gotowe do zapisu na dysk'',
  \item następuje synchronizacja plików dyskowych -- konkretne czynności wykonywane podczas tej fazy są zależne od systemu operacyjnego i wykorzystywanego systemu plików
  \item zapisywany jest plik \texttt{segments\_N} zawierający szczegółowe informacje o indeksie (m.in. numer obecnej generacji indeksu)
  \item usuwane są stare commity (istnieje możliwość przechowywania stanu indeksu sprzed określonej liczby commitów. To, które z tych stanów są usuwane -- i kiedy -- określane jest przez implementację klasy \texttt{IndexDeletionPolicy}).
@@ -126,16 +126,16 @@ Nowy segment jest tworzony i zapisywany na dysk w jednej z następujących sytua
  \item gdy liczba dokumentów dodanych w obecnie trwającym commicie przekroczy ustaloną wartość \emph{maxDocs},
  \item gdy łączna pamięć operacyjna zajęta przez dodane właśnie dokumenty przekroczy wartość współczynnika \emph{maxBufferSize}.
 \end{itemize}
-Świeżo utworzony segment należy do segmentów poziomu 0. Jeśli w indeksie znajduje się odpowiednia liczba segmentów tego samego poziomu $n$ (wartość ta jest ustalana przez współczynnik \emph{mergeFactor}), następuje połączenie (\emph{merge}) tych segmentów w jeden większy -- segment poziomu $n+1$. Każdy tworzony segment (powstały jako zrzut nowododanych dokumentów na dysk lub jako połączenie mniejszych segmentów) dostaje swój unikalny numer. Numer najmłodszego segmentu jest przechowywany w pliku \texttt{segments\_N} i określany jest jako \emph{generacja} indeksu.
+Świeżo utworzonemu segmentowi nadany zostaje poziom 0. Jeśli w indeksie znajduje się odpowiednia liczba segmentów tego samego poziomu $n$ (wartość ta jest ustalana przez współczynnik \emph{mergeFactor}), następuje połączenie (\emph{merge}) tych segmentów w jeden większy -- segment poziomu $n+1$. Każdy tworzony segment (powstały jako zrzut nowododanych dokumentów na dysk lub jako połączenie mniejszych segmentów) dostaje swój unikalny numer. Numer najmłodszego segmentu jest przechowywany w pliku \texttt{segments\_N} i określany jest jako \emph{generacja} indeksu.
 
-W wyniku działania algorytmu, w idealnym przypadku, pomijając usuwanie dokumentów, powstaje indeks o strukturze schodkowej. Każdy poziom ma maksymalnie $\emph{mergeFactor} - 1$ segmentów. Segmenty każdego poziomu są o \emph{mergeFactor} większe od segmentów poziomu niższego (rozmiar najmłodszych segmentów jest regulowany parametrem \emph{maxBufferSize}).
+W wyniku działania algorytmu, w idealnym przypadku (w którym żaden dokument nie został usunięty lub odświeżony), powstaje indeks o strukturze schodkowej. Każdy poziom ma maksymalnie $\emph{mergeFactor} - 1$ segmentów. Segmenty każdego poziomu są \emph{mergeFactor} razy większe od segmentów poziomu niższego (rozmiar najmłodszych segmentów jest regulowany parametrem \emph{maxBufferSize}).
 
-Sposób wyboru segmentów do połączenia oraz momentu, w którym ma odbyć się łączenie mogą być modyfikowane przez programistę (należy dostarczyć implementacji abstrakcyjnych klas \texttt{MergePolicy} oraz \texttt{MergeScheduler}). Łączenie jest operacją kosztowną, szczególnie dla dużych segmentów. Dlatego odbywa się w osobnym wątku -- aby nakład pracy z nią związany nie miał wpływu na czas wyszukiwania. Dodatkowo, domyślne ustawienia nie pozwalają na łączenie bardzo dużych segmentów (obecnie, większych niż 5GB).
+Sposób wyboru segmentów do połączenia oraz momentu, w którym ma odbyć się łączenie może być modyfikowany przez programistę (należy dostarczyć implementacji abstrakcyjnych klas \texttt{MergePolicy} oraz \texttt{MergeScheduler}). Łączenie jest operacją kosztowną, szczególnie dla dużych segmentów. Dlatego domyślnie odbywa się w osobnym wątku -- aby nakład pracy z nią związany nie miał wpływu na czas wyszukiwania. Dodatkowo, domyślne ustawienia nie pozwalają na łączenie bardzo dużych segmentów (obecnie, większych niż 5GB).
 
 %--------------------------------------------------------
 \section{Przygotowanie zapytania}
 
-Zapytanie reprezentowane jest przez obiekt typu \texttt{Query}. Może on być utworzony dwojako: bezpośrednio, za pomocą jawnego skonstruowania odpowiedniej podklasy \texttt{Query} bądź pośrednio -- przy pomocy \texttt{QueryParsera}.
+Zapytanie reprezentowane jest przez obiekt typu \texttt{Query}. Może on być utworzony dwojako: bezpośrednio, za pomocą jawnego skonstruowania odpowiedniej podklasy \texttt{Query} bądź pośrednio -- przy pomocy klasy \texttt{QueryParser}.
 
 \subsection{Rodzaje zapytań}
 
@@ -143,7 +143,7 @@ Lucene dostarcza wielu różnych implementacji zapytań. Oto ich krótkie opisy.
 
 \subsubsection{\texttt{TermQuery}}
 
-Jest to najprostszy i najpowszechniej używany typ zapytania, tworzony na podstawie pojedynczego termu. Dopasowuje się do wszystkich dokumentów zawierających wskazany term. Ma zastosowanie np. podczas wyszukiwania dokumentu po jego numerze identyfikacyjnym (o ile numer ten został zaindeksowany jako osobne pole). Przykład użycia tego typu zapytania wystąpił już w rozdziale pierwszym:
+Jest to najprostszy i najpowszechniej używany typ zapytania, tworzony na podstawie pojedynczego termu. Dopasowuje się do wszystkich dokumentów zawierających wskazany term. W praktyce ma zastosowanie np. podczas wyszukiwania dokumentu po jego numerze identyfikacyjnym (o ile numer ten został zaindeksowany jako osobne pole). Przykład użycia tego typu zapytania wystąpił już w rozdziale pierwszym:
 
 \begin{lstlisting}
  new TermQuery(new Term(CONTENT_FIELD, queryString));
@@ -171,7 +171,7 @@ Zapytania te dopasowują się do wszystkich dokumentów zawierających termy bą
 
 \texttt{PrefixQuery} dopasowuje się do dokumentów zawierających wyrazy zaczynające się określonym napisem. Podobnie, jak w przykładzie powyżej, może zostać użyte np. do wylistowania haseł słownika lub encyklopedii.
 
-\texttt{WildcardQuery} jest uogólnieniem poprzedniego przykładu -- dzięki użyciu dwóch znaków specjalnych: \emph{?}, oznaczającego dopasowanie do dokładnie jednego znaku oraz \emph{*}, oznaczającego dopasowanie do dowolnej liczby znaków. Wyszukiwanie przy pomocy \texttt{WildcardQuery} może być wolne, ponieważ w wielu wypadkach wymaga przejrzenia wszystkich zaindeksowanych termów. Dlatego odradza się np. konstruowania zapytań zaczynających się od znaków specjalnych.
+\texttt{WildcardQuery} jest uogólnieniem poprzedniego przykładu. Można w nim korzystać z dwóch znaków specjalnych: \emph{?}, oznaczającego dopasowanie do dokładnie jednego znaku oraz \emph{*}, oznaczającego dopasowanie do dowolnej liczby znaków. Wyszukiwanie przy pomocy \texttt{WildcardQuery} może być wolne, ponieważ w wielu wypadkach wymaga przejrzenia wszystkich zaindeksowanych termów. Dlatego odradza się np. konstruowania zapytań zaczynających się od znaków specjalnych.
 
 Najogólniejszą klasą zapytań o niepełne termy jest \texttt{RegexpQuery}, zwracające wszystkie dokumenty zawierające termy dopasowujące się do podanego wyrażenia regularnego.
 
@@ -181,11 +181,11 @@ Najogólniejszą klasą zapytań o niepełne termy jest \texttt{RegexpQuery}, zw
 
 \subsubsection{\texttt{SpanQuery}}
 
-Implementacje \texttt{SpanQuery} pozwalają na wyszukanie wskazanych słów z zaznaczeniem, że powinny one występować w bliskiej odległości od siebie (tzw. \emph{proximity search}). Podstawowymi jednostkami budującymi \texttt{SpanQuery} są \texttt{SpanTermQuery} -- spełniający w tym kontekście te same funkcje co \texttt{TermQuery} oraz \texttt{SpanNearQuery}, pozwalające na określenie dozwolonej odległości pomiędzy słowami oraz czy pozwalamy na zamianę słów miejscami.
+Implementacje \texttt{SpanQuery} pozwalają na wyszukanie wskazanych słów z zaznaczeniem, że powinny one występować w bliskiej odległości od siebie (tzw. \emph{proximity search}). Podstawowymi jednostkami budującymi \texttt{SpanQuery} są \texttt{SpanTermQuery} -- spełniający w tym kontekście te same funkcje co \texttt{TermQuery} oraz \texttt{SpanNearQuery} -- pozwalające na określenie dozwolonej odległości pomiędzy słowami oraz tego, czy zamiana słów miejscami jest ,,dozwolona''.
 
 \subsection{Przygotowanie zapytania przy pomocy klasy \texttt{QueryParser}}
 
-Poza ,,ręcznym'' tworzeniem zapytań określonego typu, Lucene umożliwia dodanie automatyczne generowanie ich na podstawie napisu. Mechanizmem to umożliwiającym jest klasa \texttt{QueryParser}. W wielu wypadkach jej użycie jest to najwygodniejszym sposobem na uzyskanie obiektu \texttt{Query}: parsuje ona wyrażenia standardowo przyjętego języka zapytań i na podstawie wyniku tworzy najlepiej pasujący obiekt \texttt{Query}. Nie jest jednak w stanie utworzyć wszystkich typów zapytań wymienionych w poprzedniej sekcji (np. \texttt{SpanQueries}).
+Poza ,,ręcznym'' tworzeniem zapytań określonego typu, Lucene umożliwia dodanie automatyczne generowanie ich na podstawie napisu. Mechanizmem to umożliwiającym jest klasa \texttt{QueryParser}. W wielu wypadkach jej użycie jest to najwygodniejszym sposobem na uzyskanie obiektu \texttt{Query}: parsuje ona wyrażenia standardowo przyjętego języka zapytań (zawierające takie znaki jak ,,+'', ,,-'' czy nawiasy) i na podstawie wyniku tworzy najlepiej pasujące rozszerzenie \texttt{Query}. Nie jest jednak w stanie utworzyć wszystkich typów zapytań wymienionych w poprzedniej sekcji (np. \texttt{SpanQueries}).
 
 %----------------------------------------------------------
 \section{Operacje na wynikach wyszukiwania}
@@ -230,15 +230,17 @@ W przykładzie zostało użyte zapytanie typu \texttt{MatchAllDocsQuery} -- dopa
 
 Filtrowanie polega na odrzuceniu pewnej części wyników. Może być przydatne np. w sytuacji, gdy nie wszyscy użytkownicy systemu wyszukującego mają dostęp do wszystkich dokumentów, albo gdy chcemy zawęzić wyniki wyszukiwania do pewnej grupy (np. chcemy pokazywać użytkownikowi tylko wyniki należące do określonej kategorii).
 
-Z programistycznego punktu widzenia, implementacja takiej funkcjonalności opiera się na dostarczeniu obiektu typu \texttt{Filter} do odpowiedniej wersji metody \texttt{IndexReader.search()}. Lucene umożliwia tworzenie filtrów na podstawie termów, ich grup, prefiksów lub zakresów (dokumenty zawierające dany term zostaną wykluczone) oraz zakresów wartości numerycznych. Z logicznego punktu widzenia, zastosowanie takiego filtra na zbiorze wyników nie różnią się niczym od zbudowania zapytania typu \texttt{BooleanQuery} z dodatkową klauzulą. W tym wypadku powodem do zastosowania filtra może być np. zwiększenie czytelności kodu. 
+Z programistycznego punktu widzenia, implementacja takiej funkcjonalności opiera się na dostarczeniu obiektu typu \texttt{Filter} do odpowiedniej wersji metody \texttt{IndexReader.search()}. Lucene umożliwia tworzenie filtrów na podstawie termów, ich grup, prefiksów lub zakresów (dokumenty zawierające dany term zostaną wykluczone) oraz zakresów wartości numerycznych. Z logicznego punktu widzenia, w przypadku, w którym wszystkie informacje dotyczące tego, które wyniki powinny zostać odfiltrowane dostępne są w czasie indeksowania, zastosowanie takiego filtra nie różni się niczym od zbudowania zapytania typu \texttt{BooleanQuery} z dodatkową klauzulą. W takim wypadku powodem zastosowania klasy \texttt{Filter} może być np. zwiększenie czytelności kodu. 
 
-Istnieją jednak przypadki, w których informacje o tym, które wyniki nie powinny być prezentowane użytkownikowi nie są dostępne w czasie indeksowania. Tutaj zastosowanie filtra jest jedynym rozwiązaniem. Dodatkowo, filtry mają tę przewagę nad zapytaniami, że po utworzeniu mogą być stosowane wielokrotnie na wynikach, bez konieczności otwierania indeksu -- filtrowanie tym sposobem trwa krócej. 
+Istnieją jednak przypadki, w których informacje o tym, które wyniki nie powinny być prezentowane użytkownikowi nie są dostępne w czasie indeksowania (np. dopiero podczas wyszukiwania wiemy, do jakich dokumentów dany użytkownik posiada dostęp). Tutaj zastosowanie filtra jest jedynym rozwiązaniem. 
+
+Dodatkowo, filtry mają tę przewagę nad zapytaniami, że po utworzeniu mogą być stosowane wielokrotnie na wynikach, bez konieczności otwierania indeksu -- filtrowanie tym sposobem trwa krócej. 
 
 \subsection{Klasa Collector}
 
-\texttt{Collector} jest elementem pośredniczącym pomiędzy nieobrobionym zbiorem wszystkich pasujących do zapytania dokumentów (przechowywanym przez pewnien czas) w wynikami zwracanymi w postaci \texttt{TopDocs}. Jego główna metoda, \texttt{Collector.collect()} jest wywoływana dla każdego pasującego dokumentu -- nie tylko dla tych najlepiej ocenionych. 
+\texttt{Collector} jest elementem pośredniczącym pomiędzy nieobrobionym zbiorem wszystkich pasujących do zapytania dokumentów (przechowywanym przez pewnien czas) a wynikami zwracanymi w postaci \texttt{TopDocs}. Działa on niejako pomiędzy pierwszą fazą wyszukiwania (dopasowanie boolowskie) a drugą (obliczanie wartości \emph{score}). Jego główna metoda, \texttt{Collector.collect()} jest wywoływana dla każdego pasującego dokumentu. 
 
-Rozszerzenie domyślnej implementacji \texttt{Collectora} (lub dostarczenie jego własnej wersji) pozwala na np. na wprowadzenie dodatkowego filtra dokumentów lub obliczenie statystyk na surowych wynikach wyszukiwania.
+Oczywiście, istnieje możliwość pomiany standardowo wykorzystywanego \texttt{Collectora} na własny. Dzięki temu można np. wprowadzić dodatkowy filtr dokumentów lub obliczać pewne statystyki na surowych wynikach wyszukiwania.
 
 %-------------------------------------------------------
 \section{Inne zagadnienia}
@@ -249,4 +251,4 @@ Jeśli mamy do czynienia z obszernym zbiorem dokumentów do zaindeksowania, dobr
 
 \subsection{Payloads}
 
-Podczas indeksowania, wraz z każdym wystąpieniem termu może zostać związana dodatkowa informacja (tzw. \emph{payload}). Zapisywana jest ona w indeksie jako tablica typu \texttt{byte[]}. Może być wykorzystana np. do oznaczenia, które wystąpienia termu są bardziej istotne lub powinny być specjalnie potraktowane, jeśli zostaną zwrócone użytkownikowi.
+Podczas indeksowania, wraz z każdym wystąpieniem termu może zostać związana dodatkowa informacja (tzw. \emph{payload}). Zapisywana jest ona w indeksie jako tablica typu \texttt{byte[]}. Może być wykorzystana np. do oznaczenia, które wystąpienia termu powinny być specjalnie potraktowane, jeśli zostaną zwrócone użytkownikowi.
