@@ -2,7 +2,9 @@
 
 W ciągu ostatnich kilkudziesięciu lat obserwujemy zjawisko zwane ,,eksplozją danych'': ilość informacji zgromadzonych przez ludzkość rośnie eksponencjalnie. Dostępność informacji nie byłaby jednak do niczego przydatna -- bez możliwości efektywnego ich przeszukiwania. Dodatkowo, większość danych, które codziennie produkujemy nie posiada wyraźnej struktury.  Wyszukiwanie interesujących fragmentów w takich zbiorach nie jest więc problemem trywialnym. Dlategoteż tak ważne stało się tworzenie narzędzi to ułatwiających -- wyszukiwarek. 
 
-Celem niniejszej pracy jest przedstawienie biblioteki Apache Lucene pozwalającej tworzyć wyszukiwarki dokumentów tekstowych. W kolejnych rozdziałach opisane zostaną: funkcjonalności oferowane przez Lucene, jej architektura oraz przedstawiona zostanie propozycja modyfikacji algorytmu łączenia list postingowych.
+Celem niniejszej pracy jest przedstawienie biblioteki Apache Lucene pozwalającej tworzyć wyszukiwarki dokumentów tekstowych. Kolejne rozdziały stanowią opis funkcjonalności oferowanych przez Lucene oraz jej architektury. Zostanie także przedstawiona propozycja modyfikacji algorytmu łączenia list postingowych.
+
+Szczególny nacisk położony zostanie na implementację i opis architektury. W Lucene zapis i odczyt danych z indeksu jest bowiem oddzielony od logiki wyszukiwania i indeksowania dokumentów. Aby to uzyskać, wykorzystano mechanizm kodeków -- podmienialnych koderów/dekoderów potrafiących przetwarzać różne formaty indeksu odwróconego.
 
 \section{Apache Lucene}
 
@@ -12,8 +14,8 @@ Apache Lucene skupia w sobie cztery główne podprojekty:
 \begin{itemize}
  \item \emph{Lucene Core}, będący faktyczną implementacją silnika wyszukiwania. Na opisie tego właśnie podprojektu skupimy się w tej pracy. W dalszej części tekstu termin ,,Lucene'' będzie odnosił się do Lucene Core.
  \item \emph{Solr} jest implementacją serwera wyszukiwania, wykorzystującą Lucene Core jako silnik. Solr, poza wyszukiwaniem tekstowym, udostępnia takie funkcjonalności jak integracja z bazą danych, operowanie na popularnych formatach dokumentów (Word, PDF) czy wyszukiwanie po współrzędnych geograficznych.
- \item \emph{Open Relevance Project} dostarcza narzędzi do testowania trafności wyników wyszukiwania.
- \item \emph{PyLucene} jest rozszerzeniem Pythona pozwalającym na korzystanie z możliwości Lucene.
+ \item \emph{Open Relevance Project} dostarcza narzędzi do testowania trafności wyników wyszukiwania. Jest projektem pomocniczym w stosunku do Lucene Core. Jego celem jest stworzenie darmowej i otwartej bazy korpusów, zapytań i ocen zgodności wyników z zapytaniem -- tak, aby każdy mógł przetestować swój system wyszukiwania pod kątem relewantności.
+ \item \emph{PyLucene} jest rozszerzeniem Pythona pozwalającym na korzystanie z możliwości Lucene w tym języku programowania.
 \end{itemize}
 
 Dokumentacja Lucene Core wymienia m.in. następujące cechy charakterystyczne biblioteki:
@@ -44,7 +46,7 @@ Arthur Conan Doyle - The Adventures of Sherlock Holmes.txt
 @\label{result-1:end}@Jane Austen - Pride and Prejudice.txt
 \end{lstlisting}
 
-Po zaindeksowaniu dokumentów program pyta użytkownika o zapytanie, po którym ma odbywać się wyszukiwanie (linia \ref{result-1:enter}). Gdy użytkownik wprowadzi słowo kluczowe, następuje proces wyszukiwania. Program wypisuje zapytanie (linia \ref{result-1:query}) a następnie -- tytuły pasujących dokumentów (linie \ref{result-1:begin}-\ref{result-1:end}). Zauważmy, że zapytanie składa się z dwóch elementów: pola, po ktorym ma odbywać się wyszukiwanie oraz słowa kluczowego, oddzielonych dwukropkiem.
+Po zaindeksowaniu dokumentów program pyta użytkownika o zapytanie, po którym ma odbywać się wyszukiwanie (linia \ref{result-1:enter}). Gdy użytkownik wprowadzi słowo kluczowe, następuje proces wyszukiwania. Program wypisuje zapytanie (linia \ref{result-1:query}) a następnie -- tytuły pasujących dokumentów (linie \ref{result-1:begin}-\ref{result-1:end}). Zauważmy, że zapytanie składa się z dwóch elementów: pola, po którym ma odbywać się wyszukiwanie oraz słowa kluczowego (termu), oddzielonych dwukropkiem. Jest to o tyle istotne, że term w Lucene jest identyfikowany przez parę: pole, w którym się znajduje oraz reprezentujący go ciąg znaków. Kwestia ta zostanie jeszcze poruszona w dalszej części pracy.
 
 Zapytanie użyte w powyższym przykładzie jest jednym z najpopularniejszych słów języka angielskiego -- nie dziwi więc fakt, że w wyniku otrzymaliśmy wszystkie dokumenty. Jeśli użyjemy mniej popularnego słowa, lista pasujących dokumentów będzie krótsza.
 
@@ -93,7 +95,7 @@ Następnie, w linii \ref{main:obtainQuery} tworzymy obiekt typu \texttt{Query}, 
 
 \subsection{Tworzenie indeksu}
 
-Metoda \texttt{createIndex()} ilustruje proces tworzenia indeksu: na początku tworzony jest obiekt typu \texttt{IndexWriter} (linia \ref{createIndex:indexWriter}) oraz lista dokumentów (linia \ref{createIndex:documents}). Po dodaniu dokumentów do zapisu (linia \ref{createIndex:add}) następuje commit oraz zamknięcie obiektu \texttt{indexWriter} (linie \ref{createIndex:commit} -- \ref{createIndex:close}).
+Metoda \texttt{createIndex()} ilustruje proces tworzenia indeksu: na początku tworzony jest obiekt typu \texttt{IndexWriter} (linia \ref{createIndex:indexWriter}) oraz lista dokumentów do zaindeksowania (linia \ref{createIndex:documents}). Po dodaniu dokumentów do zapisu (linia \ref{createIndex:add}) następuje commit oraz zamknięcie obiektu \texttt{indexWriter} (linie \ref{createIndex:commit} -- \ref{createIndex:close}).
 
 \begin{lstlisting}[label=createIndex,escapeinside={@}{@}]
 private static void createIndex(Directory directory, String path) throws IOException {
@@ -112,7 +114,7 @@ private static IndexWriter createIndexWriter(Directory directory) throws IOExcep
 
 \texttt{IndexWriter} jest klasą odpowiedzialną za zapis struktur indeksu do wskazanego katalogu. Poza obiektem typu \texttt{Directory}, \texttt{IndexWriter} przyjmuje w konstruktorze obiekt konfiguracji: \texttt{IndexWriterConfig} (linia \ref{indexWriter:config}), który z kolei potrzebuje instancji typu \texttt{Analyzer} (wykorzystaną tutaj implementacją jest \texttt{StandardAnalyzer}). \texttt{Analyzer} definiuje sposób ekstrakcji termów z dokumentu.
 
-Dokumenty tworzone są na podstawie plików zawartych we wskazanym folderze.
+Dokumenty (obiekty typu \texttt{Document}) tworzone są na podstawie plików zawartych we wskazanym folderze -- ilustruje to poniższa metoda \texttt{createDocuments()}.
 
 \begin{lstlisting}
 private static List<Document> createDocuments(String path) throws IOException {
@@ -132,7 +134,7 @@ private static List<Document> createDocuments(String path) throws IOException {
 }
 \end{lstlisting}
 
-Pojedynczy dokument (\texttt{Document}) jest zbiorem pól. Każde pole ma określony typ (wyspecyfikowany przez implementację abstrakcyjnej klasy \texttt{Field}), nazwę (podawaną jako pierwszy parametr konstruktora) oraz zawartość. Opcjonalnie zawartość ta może być zapisana w plikach indeksu -- aby można było później ją zwrócić w wyniku wyszukiwania. Przykład takiego pola znajduje się w linii \ref{createDocument:store} poniższego listingu: podczas tworzenia pola \texttt{filename} jako trzeci parametr konstruktora podane jest \texttt{Field.Store.YES} .
+Pojedynczy dokument (\texttt{Document}) jest zbiorem pól. Każde pole ma określony typ (wyspecyfikowany przez implementację abstrakcyjnej klasy \texttt{Field}), nazwę (podawaną jako pierwszy parametr konstruktora) oraz zawartość. Opcjonalnie zawartość ta może być zapisana w plikach indeksu -- aby można było później ją zwrócić w wyniku wyszukiwania. Takie pole nazywamy \emph{przechowywanym} (ang. \emph{stored field}). Przykład takiego pola znajduje się w linii \ref{createDocument:store} poniższego listingu: podczas tworzenia pola \texttt{filename} jako trzeci parametr konstruktora podane jest \texttt{Field.Store.YES} .
 
 \begin{lstlisting}[label=createDocument,escapeinside={@}{@}]
 /**
