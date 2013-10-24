@@ -14,7 +14,7 @@ Niezależnie od formatu zapisu plików indeksu, łączenie segmentów odbywa si�
 %
 Łączenie termów i następujące w związku z nim łączenie list postingowych jest najważniejszym elementem całego procesu. Przyjrzymy mu się dokładniej.
 
-Cały proces przebiega rekurencyjnie, po strukturze indeksu przedstawionej na rys. \ref{fig:indexApi}. Oznacza to, że najpierw łączone są definicje pól w obrębie zbioru łączonych segmentów. Jeśli dane pole występuje w więcej niż jednym segmencie, to w jego obrębie łączone są wszystkie termy. Analogicznie, jeśli w dwóch segmentach występuje ten sam term we właśnie połączonym polu, łączone są listy postingowe dla tego termu.
+Owo łączenie przebiega rekurencyjnie, po strukturze indeksu przedstawionej na rys. \ref{fig:indexApi}. Oznacza to, że najpierw łączone są definicje pól w obrębie zbioru łączonych segmentów. Jeśli dane pole występuje w więcej niż jednym segmencie, to w jego obrębie łączone są wszystkie termy. Analogicznie, jeśli w dwóch segmentach występuje ten sam term we właśnie połączonym polu, łączone są listy postingowe dla tego termu.
 
 \section{Łączenie pól}
 
@@ -36,9 +36,9 @@ Z każdego \texttt{AtomicReadera} pobrana jest także instancja \texttt{Fields}.
 
 \section{\texttt{MultiFields}}
 
-W procesie łączenia list postingowych mamy do czynienia ze specyficznymi rozszerzeniami klas \texttt{Fields}, \texttt{Terms} i \texttt{DocsEnum}. Są to \texttt{MultiFields}, \texttt{MultiTerms} oraz \texttt{MultiDocsEnum} i jej pochodne. Stanowią one agregatory wielu instancji, odpowiednio, \texttt{Fields}, \texttt{Terms}, \texttt{DocsEnum} i ich zadaniem jest takie operowanie tymi wewnętrznymi instancjami, aby inne klasy ,,nie wiedziały'' że mają do czynienia z agregatem. Innymi słowy, klasy \texttt{MultiX} przedstawiają zbiór swoich instancji \texttt{X} w taki sposób, jakby był to pojedynczy obiekt typu \texttt{X}. \texttt{MultiX} dziedziczy zatem interfejs klasy \texttt{X} (gdzie \texttt{X} oznacza, odpowiednio, \texttt{Fields}, \texttt{Terms} lub \texttt{DocsEnum}).
+W procesie łączenia list postingowych mamy do czynienia ze specyficznymi rozszerzeniami klas \texttt{Fields}, \texttt{Terms} i \texttt{DocsEnum}. Są to \texttt{MultiFields}, \texttt{MultiTerms} oraz \texttt{MultiDocsEnum} i jej pochodne. Stanowią one agregatory wielu instancji, odpowiednio, \texttt{Fields}, \texttt{Terms}, \texttt{DocsEnum} i ich zadaniem jest takie operowanie tymi wewnętrznymi instancjami, aby inne klasy ,,nie wiedziały'' że mają do czynienia z agregatem. Innymi słowy, klasy \texttt{MultiX} przedstawiają zbiór swoich instancji \texttt{X} w taki sposób, jakby był to pojedynczy obiekt typu \texttt{X}. \texttt{MultiX} dziedziczy zatem interfejs (zachowanie) klasy \texttt{X} (gdzie \texttt{X} oznacza, odpowiednio, \texttt{Fields}, \texttt{Terms} lub \texttt{DocsEnum}).
 
-\texttt{MultiFields} jest najbardziej ogólną z takich klas. Zgodnie z tym, co zostało powiedziane w poprzednim akapicie, jest ona rozszerzeniem klasy \texttt{Fields}. Ponadto grupuje w sobie reprezentacje pól pochodzących z różnych segmentów i pozwala na operowanie ich zawartością tak, jakby były to pola pobrane z jednego segmentu. Jej schemat (oraz schematy klas powiązanych) przedstawia rys. \ref{multiFields}.
+\texttt{MultiFields} jest najbardziej złożoną z takich klas. Zgodnie z tym, co zostało powiedziane w poprzednim akapicie, jest ona rozszerzeniem klasy \texttt{Fields}. Ponadto grupuje w sobie reprezentacje pól pochodzących z różnych segmentów i pozwala na operowanie ich zawartością tak, jakby były to pola pobrane z jednego segmentu. Jej schemat (oraz schematy klas powiązanych) przedstawia rys. \ref{multiFields}.
 
 \begin{figure}[here]
  \includegraphics[scale=0.65]{pictures/MultiFields_2.jpg}
@@ -47,13 +47,13 @@ W procesie łączenia list postingowych mamy do czynienia ze specyficznymi rozsz
 
 To, że \texttt{MultiFields} jest rozszerzeniem klasy \texttt{Fields} oznacza, że posiada wszystkie jej funkcjonalności i w ich obrębie posługuje się takim samym interfejsem. Z punktu widzenia klasy zarządzającej procesem łączenia segmentów (\texttt{SegmentMergera}) zachowuje się więc dokładnie jak \texttt{Fields} (o tym właśnie była mowa w pierwszym akapicie tej sekcji). Jest to przykład dobrego podziału odpowiedzialności pomiędzy klasami i ukrywania wewnętrznej implementacji.
 
-Z punktu widzenia algorytmu łączenia segmentów, najbardziej interesującymi metodami \texttt{MultiFields} są \texttt{MultiFields.terms(String field)}, zwracająca termy należące do pola o podanej nazwie oraz \texttt{MultiFields.iterator()}, zwracająca iterator pozwalający na przechodzenie po kolejnych nazwach pól. Gdy definicje pól zostaną już połączone, w ramach każdego z nich zostaną połączone termy. A termy dla danego pola o nazwie \texttt{fieldName} one zostaną zwrócone właśnie przez \texttt{MultiFields.terms(String fieldName)}.
+Z punktu widzenia algorytmu łączenia segmentów, najbardziej interesującymi metodami \texttt{MultiFields} są \texttt{MultiFields.terms(String field)}, zwracająca termy należące do pola o podanej nazwie oraz \texttt{MultiFields.iterator()}, zwracająca iterator pozwalający na przechodzenie po kolejnych nazwach pól. Bowiem gdy definicje pól zostaną już połączone (co odbyło się poprzez utworzenie instancji \texttt{MultiFields}), w ramach każdego z nich zostaną połączone termy. A termy dla danego pola o nazwie \texttt{fieldName} one zostaną zwrócone właśnie przez \texttt{MultiFields.terms(String fieldName)}.
 
 \section{\texttt{MultiFields.terms()}}
 
 \texttt{MultiFields.terms()} zwraca instancję typu \texttt{MultiTerms}. Podobnie jak \texttt{MultiFields} agreguje pola z różnych segmentów, ale zachowuje się tak, jak \texttt{Fields} pochodzące z pojedynczego segmentu, tak \texttt{MultiTerms}  gromadzi wszystkie termy znajdujące się w danym polu. Ukrywa też to, że dla danego termu być może mamy do czynienia z kilkoma termami o takim samym tokenie, ale pochodzącymi z tego samego pola z różnych segmentów.
 
-Schemat tworzenia instancji \texttt{MultiTerms} znajduje się na rys. \ref{fig:multiTerms}. Nietrudno dostrzec podobieństwo z algorytmem tworzenia instancji \texttt{MultiFields} (rys. \ref{fig:fieldMerge}). Instancje \texttt{Terms} są pobrane przy pomocy \texttt{Fields.terms(f)} dla \texttt{f} będącego nazwą pola. Jeśli obiekt \texttt{Terms} istnieje dla danego pola (tzn. \texttt{terms(f) != null}), podawany jest, wraz z odpowiadającym mu obiektem \texttt{ReaderSlice}, do właśnie tworzonej instancji \texttt{MultiTerms}.
+Schemat tworzenia instancji \texttt{MultiTerms} znajduje się na rys. \ref{fig:multiTerms}. Nietrudno dostrzec podobieństwo z algorytmem tworzenia instancji \texttt{MultiFields} (rys. \ref{fig:fieldMerge}). Instancje \texttt{Terms} są pobrane przy pomocy \texttt{Fields.terms(f)} dla \texttt{f} będącego nazwą pola przechowywanego przez \texttt{MultiFields}. Jeśli obiekt \texttt{Terms} istnieje dla danego pola (tzn. \texttt{terms(f) != null}), podawany jest, wraz z odpowiadającym mu obiektem \texttt{ReaderSlice}, do właśnie tworzonej instancji \texttt{MultiTerms}.
 
 \begin{figure}[here]
  \centering
@@ -71,52 +71,56 @@ Jak zostało to już wspomniane, \texttt{Fields.iterator()} przechodzi po nazwac
 Iteratory $i_1$, $i_2$, ... $i_n$ pochodzą z instancji \texttt{Fields} zgromadzonych w \texttt{MultiFields}. \texttt{MergedIterator} wykorzystuje kolejkę priorytetową do przechowywania zagregowanych iteratorów. Porządek kolejki jest zdefiniowany przez elementy, na które w danym momencie wskazują iteratory $i_k, k \in \{1, ..., n\}$.
 
 \section{Łączenie termów}
+\label{sec:termsMerge}
 
 Łączenie termów odbywa się w metodzie \texttt{merge()} klasy \texttt{TermsConsumer}, która jako parametry przyjmuje:
 \begin{itemize}
- \item \texttt{MergeState} -- pomocniczy obiekt przechowujący stan obecnego procesu łączenia segmentów. Gromadzi listę \texttt{AtomicReaderów}, strukturę z informacją o dokumentach do usunięcia, itp. Nie będziemy się nim zajmować w dalszej części pracy;
+ \item \texttt{MergeState} -- pomocniczy obiekt przechowujący stan obecnego procesu łączenia segmentów. Gromadzi listę \texttt{AtomicReaderów}, strukturę z informacją o dokumentach do usunięcia, itp;
  \item \texttt{IndexOptions} -- wartość wskazująca na to, jakie informacje o termach i ich wystąpieniach zostały zaindeksowane. \texttt{IndexOptions} przyjmuje jedną z czterech wartości:
  \begin{enumerate}
   \item \texttt{DOCS\_ONLY}: oznacza, że w indeksie znajduje się tylko informacja o tym, czy dany term tam wystąpił, czy nie. Częstości występowania termu oraz pozycje wystąpień są pominięte -- co skutkuje np. tym, że zapytania frazowe nie mogą zostać na takim indeksie wykonane. Obliczanie zgodności zapytania z dokumentem zachowuje się tak, jakby każdy term występował w dokumencie dokładnie raz.
   \item \texttt{DOCS\_AND\_FREQS}: dla każdego termu zapamiętana jest informacja o jego liczbie wystąpień w dokumencie. Dzięki temu podobieństwo zapytania do dokumentu może być obliczone precyzyjniej. Zapytania frazowe oraz inne, wykorzystujące informacje o pozycjach termów, nie mogą być wykonywane.
   \item \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS}: najczęściej wykorzystywany sposób indeksowania: w indeksie pamiętane są częstości termów oraz pozycje ich wystąpień, w związku z czym możliwe jest wykonywanie wielu typów zapytań.
-  \item \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS\_AND\_OFFSETS}: poza częstościami i pozycjami wystąpień termów pamiętane są informacje o dokładnym położeniu każdego termu (tzn. odległości znakowej od początku dokumentu) i jego faktycznej długości (pamiętamy o tym, że różne formy danego termu podczas analizy są sprowadzane do formy bazowej -- dlatego informacja o pierwotnej długości wystąpienia musi być dodatkowo zapamiętywana).
+  \item \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS\_AND\_OFFSETS}: poza częstościami i pozycjami wystąpień termów pamiętane są informacje o dokładnym położeniu każdego termu (tzn. odległości znakowej od początku dokumentu) i jego faktycznej długości (pamiętamy o tym, że różne formy danego termu podczas analizy są sprowadzane do formy bazowej -- dlatego informacja o pierwotnej długości wystąpienia musi być dodatkowo zapamiętana).
  \end{enumerate}
  \item \texttt{TermsEnum} -- w procesie łączenia termów będzie to instancja \texttt{MultiTermsEnum}, pobrana z obiektu \texttt{MultiTerms}.
 \end{itemize}
 
+Jak pamiętamy, łączenie termów natępuje w ramach jednego (dopiero co połączonego) pola \texttt{f}, zawartego w obiekcie typu \texttt{MultiFields}. Aby termy zostały połączone, instancja ta musi wylistować wszystkie termy należące do \texttt{f}. Poprzez wywołanie \texttt{MultiFields.terms(s)} tworzy więc dla \texttt{f} obiekt typu \texttt{MultiTerms}, z którego z kolei jest pobrana instancja iteratora termów -- \texttt{MultiTermsEnum} (konkretniej: \texttt{MultiTermsEnum} jest wynikiem wywołania \texttt{MultiTerms.iterator()}). Właśnie ona będzie odgrywała najważniejszą rolę w dalszej części procesu.
+
 W najprostszym przypadku -- dla opcji \texttt{DOCS\_ONLY} -- algorytm łączenia termów wygląda następująco:
 \begin{enumerate}
- \item Zainicjalizuj zbiór dokumentów odwiedzonych już dla właśnie łączonego termu (\texttt{visitedDocs}).
+ \item Zainicjalizuj \texttt{visitedDocs} -- zbiór dokumentów odwiedzonych już dla właśnie łączonego pola.
  \item Zainicjalizuj pole \texttt{docsEnum} typu \texttt{MappingMultiDocsEnum}, o ile nie zostało to jeszcze zrobione (leniwa inicjalizacja -- właśnie łączony term jest pierwszym z termów pola).
  \item Dla każdego termu \texttt{t} dostępnego z \texttt{MultiTermsEnum} pobierz listę \texttt{docsEnumIn} dokumentów, w których term ten występuje. Lista opakowana jest w instancję klasy \texttt{MultiDocsEnum}. Dodaj dokumenty z \texttt{docsEnumIn} do \texttt{docsEnum}. Wykonaj kroki \ref{enum:begin} -- \ref{enum:end} dla \texttt{t}.
  \item \label{enum:begin} Rozpocznij zapis listy postingowej dla \texttt{t} (przy pomocy wywołania \texttt{startTerm(t)}). Jednocześnie pobierz instancję \texttt{PostingsConsumera}, która umożliwi połączenie list postingowych pochodzących z różnych segmentów.
- \item Wywołaj \texttt{PostingsConsumer.merge()}, jako parametry przekazując obiekt przechowujący stan, \texttt{DOCS\_ONLY} jako opcję indeksowania, \texttt{docsEnum} i listę odwiedzonych już dokumentów.
+ \item \label{alg:postingsConsumerMergeCall} Wywołaj \texttt{PostingsConsumer.merge()}, jako parametry przekazując obiekt przechowujący stan (\texttt{MergeState}), \texttt{DOCS\_ONLY} jako opcję indeksowania, \texttt{docsEnum} i listę odwiedzonych już dokumentów \texttt{visitedDocs}.
  \item \label{enum:end} Zakończ zapis termu (\texttt{PostingsConsumer.finishTerm()}), zapamiętaj liczbę dokumentów w połączonej liście.
+ \item Zakończ algorytm.
 \end{enumerate}
 
 Dla pozostałych wartości parametru \texttt{IndexOptions} łączenie termów przebiega podobnie. Różni się jedynie typami struktur przechowujących referencje do list postingowych.
 \begin{itemize}
- \item W przypadku \texttt{DOCS\_AND\_FREQS} korzystamy z innej instancji typu \texttt{MappingMultiDocsEnum}, \texttt{docsAndFreqsEnum}, zamiast \texttt{docsEnum}.
- \item W przypadkach \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS} i \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS\_AND\_OFFSETS} korzystamy z tej samej instancji klasy \texttt{MappingMultiDocsAndPositionsEnum}, \texttt{postingsEnum}.
+ \item W przypadku \texttt{DOCS\_AND\_FREQS} korzystamy z innej instancji typu \\ \texttt{MappingMultiDocsEnum} -- \texttt{docsAndFreqsEnum}, zamiast \texttt{docsEnum}.
+ \item W przypadkach \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS} oraz \\ \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS\_AND\_OFFSETS} korzystamy z tej samej instancji klasy \texttt{MappingMultiDocsAndPositionsEnum}, \texttt{postingsEnum}.
 \end{itemize}
 Różne typy i różne instancje przechowujące dane o listach postingowych są tutaj potrzebne, ponieważ w ramach jednego procesu łączenia segmentów możemy mieć do czynienia z różnymi opcjami indeksowania pól (jak już wspomniano, opcje indeksowania pól są całkowicie od siebie niezależne, nawet dla pól występujących w tym samym segmencie).
 
 \section{Łączenie list postingowych}
 
-Łączenie list postingowych jest zaimplementowane w metodzie \texttt{merge()} klasy \texttt{PostingsConsumer}. Metoda ta przyjmuje następujące parametry, przekazywane z \texttt{TermsConsumer.merge()}:
+Łączenie list postingowych jest zaimplementowane w metodzie \texttt{merge()} klasy \texttt{PostingsConsumer} (por. krok \ref{alg:postingsConsumerMergeCall} algorytmu w sekcji \ref{sec:termsMerge}). Metoda ta przyjmuje następujące parametry, przekazywane z \texttt{TermsConsumer.merge()}:
 \begin{itemize}
- \item \texttt{MergeState}: przekazany z instancji \texttt{TermsConsumera}. Przydatny będzie do uzyskania informacji o dokumentach usuniętych.
+ \item \texttt{MergeState}: przekazany bez zmian z instancji \texttt{TermsConsumera}. Przydatny będzie do uzyskania informacji o dokumentach usuniętych.
  \item \texttt{IndexOptions}: podobnie, jak w przypadku łączenia termów, dokładny algorytm zależy od wybranej opcji indeksowania.
- \item \texttt{DocsEnum}: reprezentacja list dokumentów, które mają być połączone. Obecny kodek wykorzystuje \texttt{MappingMultiDocsEnum} lub \texttt{MappingMultiDocsAndPositionsEnum}, w zależności od opcji indeksowania (i instancji przekazanej tutaj z \texttt{TermsConsumer.merge()}). 
- \item \texttt{FixedBitSet}: zbiór bitowy reprezentujący odwiedzone już dokumenty.
+ \item \texttt{DocsEnum}: reprezentacja list dokumentów, które mają być połączone. Obecny kodek wykorzystuje \texttt{MappingMultiDocsEnum} lub \\ \texttt{MappingMultiDocsAndPositionsEnum}, w zależności od opcji indeksowania (i instancji przekazanej tutaj z \texttt{TermsConsumer.merge()}). 
+ \item \texttt{FixedBitSet}: zbiór bitowy reprezentujący odwiedzone już dokumenty (\texttt{visitedDocs} z algorytmu w sekcji \ref{sec:termsMerge}).
 \end{itemize}
 
-Podobnie, jak w \texttt{TermsConsumer.merge()} opcje indeksowania wpływają na algorytm łączenia list. W najprostszym przypadku (dla \texttt{IndexOptions.DOCS\_ONLY}) algorytm ten ma następujący przebieg:
+Podobnie jak w \texttt{TermsConsumer.merge()}, opcje indeksowania wpływają na algorytm łączenia list. W najprostszym przypadku (dla \texttt{IndexOptions.DOCS\_ONLY}) algorytm ten ma następujący przebieg:
 \begin{enumerate}
  \item \label{jeden} Pobierz kolejny posting z listy (z \texttt{DocsEnum}) do zmiennej \texttt{doc}. Jeśli otrzymaną wartością jest \texttt{NO\_MORE\_DOCS}, zakończ algorytm. W przeciwnym wypadku przejdź do kroku \ref{dwa}.
  \item \label{dwa} Zaznacz \texttt{doc} jako odwiedzony (skorzystaj z dostarczonej instancji \texttt{FixedBitSet}).
- \item \label{trzy} Rozpocznij zapis postingu. Wpisz wartość \texttt{doc}.
+ \item \label{trzy} Rozpocznij zapis postingu. Zapisz wartość \texttt{doc} do listy wynikowej.
  \item Zakończ zapis postingu.
  \item Przejdź do kroku \ref{jeden}.
 \end{enumerate}
@@ -124,7 +128,7 @@ Podobnie, jak w \texttt{TermsConsumer.merge()} opcje indeksowania wpływają na 
 W przypadku innych opcji indeksowania do powyższego algorytmu wprowadza się kilka zmian.
 \begin{itemize}
  \item Dla opcji \texttt{DOCS\_AND\_FREQS}, poza pobraniem postingu z listy \texttt{DocEnum} w kroku \ref{jeden}, odczytuje się także częstość występowania termu w dokumencie, \texttt{docFreq}, która później zapisywana jest wraz z postingiem w kroku \ref{trzy}.
- \item Dla opcji \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS} dodatkowo odczytywane są (i później zapisywane do listy wynikowej) pozycje wystąpień termu w dokumencie oraz ewentualne \emph{payloads}, a dla \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS\_AND\_OFFSETS} -- również ich odległości znakowe od początku dokumentu i długości.
+ \item Dla opcji \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS} dodatkowo odczytywane są (i później zapisywane do listy wynikowej) pozycje wystąpień termu w dokumencie oraz ewentualne \emph{payloads}, a dla \texttt{DOCS\_AND\_FREQS\_AND\_POSITIONS\_AND\_OFFSETS} -- również ich odległości znakowe od początku dokumentu i długości. Wszystkie te informacje zapisywane są wraz z postingiem w kroku \ref{trzy}.
 \end{itemize}
 
 \section{Rozszerzenia klasy \texttt{DocsEnum} używane w procesie łączenia postingów}
@@ -138,7 +142,7 @@ Podczas łączenia termów (w metodzie \texttt{TermsConsumer.merge()}) z iterato
  \caption{\texttt{MultiDocsEnum} i jej zawartość. Źródło: opracowanie własne. \label{fig:multiDocsEnum}}
 \end{figure}
 
-Poza innymi wskaźnikami i zmiennymi, \texttt{MultiDocsEnum} posługuje się zmienną \texttt{current} wskazującą na obecnie odczytywany iterator dokumentów -- \texttt{current} odwiedza wszystkie zgromadzone obiekty \texttt{DocsEnum} i iteruje po ich zawartości. Przeskakuje na następny w momencie wyczerpania postingów w obecnie odwiedzanej instancji \texttt{DocsEnum}. Dzięki temu z punktu widzenia klasy \texttt{PostingsConsumer} \texttt{MultiDocsEnum} zachowuje się dokładnie tak samo, jak każdy \texttt{DocsEnum}. 
+Poza innymi wskaźnikami i zmiennymi, \texttt{MultiDocsEnum} posługuje się zmienną \texttt{current} wskazującą na obecnie odczytywany iterator dokumentów -- \texttt{current} odwiedza wszystkie zgromadzone obiekty \texttt{DocsEnum} i iteruje po ich zawartości. Przeskakuje na następny w momencie wyczerpania postingów w obecnie odwiedzanej instancji \texttt{DocsEnum}. Dzięki temu, z punktu widzenia klasy \texttt{PostingsConsumer}, \texttt{MultiDocsEnum} zachowuje się dokładnie tak samo, jak każdy \texttt{DocsEnum} -- pomimo, że faktycznie jest agregatem obiektów typu \texttt{DocsEnum}. 
 
 Obiekty \texttt{ReaderSlice} służą z kolei do odczytywania podstawy przenumerowania dokumentów pochodzących z danego segmentu.
 
@@ -190,12 +194,12 @@ Dodatkowo, potrzebne są też odpowiedniki klas \texttt{DocsEnum} oraz \texttt{M
 
 Taka zmiana wymaga uzasadnienia kilku kwestii.
 \begin{enumerate}
- \item \label{item:inheritance} Jak można odczytać z diagramu \ref{fig:postingEnums}, zarówno \texttt{PostingElementEnum} oraz \texttt{MultiDocsAndPositionsEnum} rozszerzają klasę \texttt{DocsEnum} i w związku z tym dziedziczą jej interfejs, posługujący się jedynie liczbami całkowitymi. Na pierwszy rzut oka może to wydawać się niezgodne z ideą zmiany -- chcemy wszak wprowadzić abstrakcję opakowującą elementy list postingowych (do tego służy nam właśnie \texttt{PostingElement}) i nowe klasy powinny się tylko nią posługiwać. Dziedziczenie po \texttt{DocsEnum} służy tutaj zachowaniu zgodności z resztą systemu -- chcemy, aby wprowadzone zmiany jak najmniej modyfikowały istniejący interfejs programisty biblioteki i jak najmniej ingerowały w strukturę klas -- w szczególności, jeśli nie są to klasy pojedynczego kodeka, a klasy wspólne, wykorzystywane przez wszystkie kodeki. Dodatkowo, dziedziczenie po \texttt{DocsEnum} pozwoli nam wykorzystać to, że lista postingowa jest skip listą (co okaże się przydatne podczas wyznaczania fragmentu listy do późniejszego przekopiowania).
- \item Wszystkie metody klasy \texttt{DocsEnum} są abstrakcyjne. W związku z tym, dużo bardziej elegancko byłoby posłużyć się w tym wypadku interfejsem (najlepiej parametryzowanym), a nie klasą abstrakcyjną. Możnaby wtedy uprościć hierarchię iteratorów postingów dzięki wykorzystaniu wielodziedziczenia (w Javie klasy mogą dziedziczyć tylko po jednej klasie bazowej -- mogą natomiast implementować wiele interfejsów): funkcjonalność iterowania po postingach można byłoby wtedy oddzielić od funkcjonalności grupowania innych iteratorów. Taka zmiana wymagałaby jednak przebudowania znacznej części Lucene. Warto wspomnieć to, że \texttt{DocsEnum} dziedziczy implementację metody \texttt{slowAdvance(int target)} po \texttt{DocIdSetIteratorze}. Zatem przepisanie abstrakcyjnego \texttt{DocsEnum} na interfejs wymagałoby przeniesienia implementacji \texttt{slowAdvance()} w inne miejsce. Ponadto, zmiany tego typu prawdopodobnie nie poprawiłaby niczego poza czytelnością kodu. Praktycznie rzecz biorąc nie warto więc ich wprowadzać.
+ \item \label{item:inheritance} Jak można odczytać z diagramu \ref{fig:postingEnums}, zarówno \texttt{PostingElementEnum} oraz \texttt{MultiDocsAndPositionsEnum} rozszerzają klasę \texttt{DocsEnum} i w związku z tym dziedziczą jej interfejs, posługujący się jedynie liczbami całkowitymi. Na pierwszy rzut oka może to wydawać się niezgodne z ideą zmiany -- chcemy wszak wprowadzić abstrakcję opakowującą elementy list postingowych (do tego służy nam właśnie \texttt{PostingElement}) i nowe klasy powinny się tylko nią posługiwać. Dziedziczenie po \texttt{DocsEnum} służy tutaj zachowaniu zgodności z resztą systemu. Chcemy, aby wprowadzone zmiany w jak najmniejszym stopniu modyfikowały istniejący interfejs programisty biblioteki i jak najmniej ingerowały w strukturę klas -- w szczególności, jeśli nie są to klasy pojedynczego kodeka, a klasy wspólne, wykorzystywane przez wszystkie kodeki. Dodatkowo, dziedziczenie po \texttt{DocsEnum} pozwoli nam wykorzystać to, że lista postingowa jest skip listą (co okaże się przydatne podczas wyznaczania fragmentu listy do późniejszego przekopiowania).
+ \item Wszystkie metody klasy \texttt{DocsEnum} są abstrakcyjne. W związku z tym, dużo bardziej elegancko byłoby posłużyć się w tym wypadku interfejsem (najlepiej parametryzowanym), a nie klasą abstrakcyjną. Możnaby wtedy uprościć hierarchię iteratorów postingów dzięki wykorzystaniu wielodziedziczenia (w Javie klasy mogą dziedziczyć tylko po jednej klasie bazowej -- mogą natomiast implementować wiele interfejsów): funkcjonalność iterowania po postingach można byłoby wtedy oddzielić od funkcjonalności grupowania innych iteratorów. Taka zmiana wymagałaby jednak przebudowania znacznej części Lucene. Warto wspomnieć to, że \texttt{DocsEnum} dziedziczy implementację metody \texttt{slowAdvance(int target)} po \texttt{DocIdSetIteratorze}. Zatem przepisanie abstrakcyjnego \texttt{DocsEnum} na interfejs wymagałoby przeniesienia implementacji \texttt{slowAdvance()} w inne miejsce. Ponadto, zmiany tego typu prawdopodobnie nie poprawiłyby niczego poza czytelnością kodu. Praktycznie rzecz biorąc nie warto więc ich wprowadzać.
  \item W punkcie \ref{item:inheritance} jako jeden z argumentów za dziedziczeniem \texttt{PostingElementEnum} z \texttt{DocsEnum} wspomniane zostało współdzielenie operowania na liście postingowej jak na skip liście. Możnaby tutaj pokusić się o oddzielenie tego zadania od reszty funkcjonalności \texttt{DocsEnum} poprzez wyekstrahowanie interfejsu \texttt{Skippable}, gromadzącego metody \texttt{advance(int target)} i \texttt{slowAdvance(int target)}. Poprzez wprowadzenie relacji implementowania interfejsu pomiędzy \texttt{DocsEnum} i \texttt{Skippable} oraz \texttt{PostingElementEnum} i \texttt{Skippable}, zależność między \texttt{DocsEnum} i \texttt{PostingElementEnum} byłaby rozluźniona -- potencjalnie możnaby nawet zrezygnować z relacji dziedziczenia pomiędzy tymi klasami. Wadą takiego rozwiązania byłby brak możliwości dziedziczenia implementacji metody \texttt{slowAdvance()}, która w obecnym kształcie systemu jest taka sama dla wszystkich iteratorów elementów list postingowych.
 \end{enumerate}
 
-Wprowadzenie \texttt{PostingElement} oraz nowych iteratorów postingów wymagałoby też zmian w metodach \texttt{merge()} klas \texttt{TermsConsumer} oraz \texttt{PostingsConsumer}. Iterowanie po postingach i ich odczyt jest wykonywany przez \texttt{PostingElementEnum}, samo łączenie odbywa się w metodzie wspomnianej powyżej. Dodatkowo, \texttt{PostingsConsumer} (a dokładniej: jego rozszerzenie przypisane do danego kodeka) jest odpowiedzialny za zapis list postingowych. Należy zatem dodać mu funkcjonalność zapisu zakodowanych bloków postingów. 
+Wprowadzenie \texttt{PostingElement} oraz nowych iteratorów postingów wymaga też zmian w metodach \texttt{merge()} klas \texttt{TermsConsumer} oraz \texttt{PostingsConsumer}. Iterowanie po postingach i ich odczyt jest wykonywany przez \texttt{PostingElementEnum}, samo łączenie odbywa się w metodzie wspomnianej powyżej. Dodatkowo, \texttt{Postings}-\texttt{Consumer} (a dokładniej: jego rozszerzenie przypisane do danego kodeka) jest odpowiedzialny za zapis list postingowych. Należy zatem dodać mu funkcjonalność zapisu zakodowanych bloków postingów. 
 
 Od strony implementacyjnej, najprostszym sposobem dodania wspomnianych funkcjonalności jest zastosowanie wzorca projektowego \emph{dekorator}: opakowanie klasy \texttt{PostingsConsumer} w klasę, która jednocześnie dziedziczyć będzie po niej zachowanie. Klasę opakowującą nazwijmy \texttt{BlockPostingsConsumer}. Jej nowe funkcjonalności są zaimplementowane bezpośrednio, natomiast fukcjonalności dziedziczone z \texttt{PostingsConsumer} są delegowane do wewnętrznej instancji tego typu. Metoda \texttt{merge()}, pochodząca z \texttt{PostingsConsumer} jest nadpisana w \texttt{BlockPostingsConsumer}.
 
@@ -228,7 +232,7 @@ Jak widać, za łączenie postingów jest teraz odpowiedzialna klasa \texttt{Blo
 
 Do rozwiązania pozostaje jeszcze następująca kwestia: jak ustalić, który fragment listy postingowej (pojedyncza wartość, pojedynczy blok, wiele bloków) powinien zostać przekopiowany? Klasą, która powinna o tym decydować będzie \texttt{PostingElementEnum} lub klasa z niej wywiedziona. 
 
-Pomimo, że wszystkie bloki list postignowych są zakodowane i nie możemy pobrać z nich wartości bezpośrednio, możemy wykorzystać tzw. \texttt{skipData}. Pamiętamy, że lista postingowa jest skip listą. Przed każdym blokiem postingów zapisywana jest informacja o wskaźnikach do tego bloku oraz (odkodowana) wartość pierwszego elementu bloku. Mając dany \texttt{mergeState}, potrafimy wylistować numery wszystkich dokumentów usuniętych. Możemy więc ustalić (posługując się skip listą), jak o wiele bloków odległy jest kolejny element usunięty i bloki bez usunięć przekopiować bez dekodowania.
+Pomimo, że wszystkie bloki list postignowych są zakodowane i nie możemy pobrać z nich wartości bezpośrednio, możemy wykorzystać tzw. \texttt{skipData}. Pamiętamy, że lista postingowa jest skip listą. Przed każdym blokiem postingów zapisywana jest informacja o wskaźnikach do tego bloku oraz (odkodowana) wartość pierwszego elementu bloku. Mając dany \texttt{mergeState}, potrafimy wylistować numery wszystkich dokumentów usuniętych. Możemy więc ustalić (posługując się skip listą), o jak wiele bloków odległy jest kolejny element usunięty i bloki bez usunięć przekopiować bez dekodowania.
 
 Jeśli okazałoby się, że w obecnym bloku występują dokumenty usunięte, możemy ustalić ich liczbę -- i na tej podstawie zdecydować, czy blok powinien być przekopiowany w całości, czy po jednym elemencie. 
 
